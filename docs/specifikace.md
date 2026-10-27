@@ -207,4 +207,6 @@ Změny proti pilotu:
 - Dlužníci: poslední platba (kolik, kdy), zavolat, upomínka (SMS/WhatsApp/e-mail).
 - Vložit platbu: výběr nájemníka + výsledek po uložení (uhrazeno / zbývá / přeplatek).
 - Záloha: připomínka po **60 dnech** (místo každý měsíc).
+- **Zdroj platby** viditelný u každé platby: `vypis` (import, banka + účet) / `hotove` / `prevod` (ručně zapsaný převod bez výpisu). Ruční zápis má volbu Hotově / Převodem. Import: platba odpovídající ručnímu převodu (stejný nájemník, částka, datum ± 5 dní) → stav `rucne` = nabídka „Nahradit ruční záznam“ / „Je to jiná platba“, nikdy automaticky.
+- **Upomínky se šablonami:** šablony zpráv (Nastavení) se značkami {osloveni} {jmeno} {dluh} {tento_mesic} {mesic} {najem} {nemovitost} {ucet} {vs} {termin}; odeslání = náhled (lze upravit) → otevřít SMS (`sms:?body=`) / WhatsApp (`wa.me`) / e-mail (`mailto:`); historie upomínek u nájemníka; nové pole nájemníka `osloveni`. Výchozí šablony: přátelská připomínka, upomínka po splatnosti, důrazná upomínka, potvrzení platby.
 - Návrhy na později (nerozhodnuto): QR platba, kauce, graf příjmů, zámek PIN, notifikace 1. v měsíci.

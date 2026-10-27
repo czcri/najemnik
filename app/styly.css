@@ -178,3 +178,15 @@ small { color: var(--tlumene); }
   opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; z-index: 10; max-width: calc(100% - 32px);
 }
 #toast.videt { opacity: 1; transform: translate(-50%, 0); }
+
+/* způsob / zdroj platby */
+.volba { border: 0; padding: 0; margin: 0; display: flex; gap: 8px; flex-wrap: wrap; }
+.volba legend { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; padding: 0; }
+.formular .volba label {
+  flex: 1; flex-direction: row; align-items: center; justify-content: center; gap: 8px;
+  padding: 12px; border: 1px solid var(--cara); border-radius: 8px; background: var(--plocha); font-weight: 500;
+}
+.formular .volba label:has(input:checked) { border-color: var(--hlavni); outline: 1px solid var(--hlavni); }
+.formular .volba input { width: auto; }
+.zdroj { display: inline-block; font-size: 0.78rem; padding: 0 6px; border-radius: 6px; background: var(--pozadi); }
+.zdroj.vypis { background: var(--preplatek-pozadi); color: var(--preplatek); }

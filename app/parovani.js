@@ -1,6 +1,7 @@
 // Párování příchozích plateb z výpisu na nájemníky (spec. kap. 11) – čistá logika, testuje se v node.
 //
 // Nájemník má navíc (nepovinně): vs, ucetProPlatby (můj účet, kam platí), uctyPlatce (účty, ze kterých platí).
+// Platba má zdroj: { typ: 'vypis', … } | { typ: 'hotove' } | { typ: 'prevod' } (ručně zapsaný převod bez výpisu).
 // Pravidla (uložená v aplikaci): { nenajemUcty: [protiúčty, které nikdy nejsou nájem], ignorovane: [klíče pohybů] }.
 import { normalizujSymbol } from './vypisy.js';
 
@@ -37,6 +38,7 @@ export const jePrichoziPlatba = p => p.castkaHal > 0 && !!(p.protiucet || p.naze
 /**
  * @returns pole { klic, pohyb, stav, najemnikId, kandidati, duvod, zapamatovatUcet }
  *   stav: 'jiste' | 'navrh' | 'neprirazeno' | 'nenajem' | 'duplicita'
+ *         | 'rucne' (odpovídá ručně zapsanému převodu – nahraditPlatbuId)
  */
 export function sparuj(vypis, najemnici, platby, pravidla = prazdnaPravidla()) {
   const klice = klicePohybu(vypis.ucet, vypis.pohyby);
@@ -109,25 +111,51 @@ export function sparuj(vypis, najemnici, platby, pravidla = prazdnaPravidla()) {
     }
     v.duvod = 'Plátce neznámý.';
   });
+  oznacRucniPrevody(vysledky, platby);
   return vysledky;
+}
+
+const ROZPETI_DNU = 5;
+const dnyMezi = (a, b) => Math.abs(Date.parse(a) - Date.parse(b)) / 86400000;
+
+// Ručně zapsaný převod (nebo platba bez zdroje z pilotu) se stejnou částkou do ±5 dnů
+// = pravděpodobně tatáž platba → nezapisovat automaticky, nabídnout nahrazení.
+function oznacRucniPrevody(vysledky, platby) {
+  const pouzite = new Set();
+  for (const v of vysledky) {
+    if ((v.stav !== 'jiste' && v.stav !== 'navrh') || !v.najemnikId) continue;
+    const castka = Math.round(v.pohyb.castkaHal / 100);
+    const shoda = platby
+      .filter(p => p.najemnikId === v.najemnikId && !pouzite.has(p.id)
+        && (!p.zdroj || p.zdroj.typ === 'prevod') && p.castka === castka
+        && dnyMezi(p.datum, v.pohyb.datum) <= ROZPETI_DNU)
+      .sort((a, b) => dnyMezi(a.datum, v.pohyb.datum) - dnyMezi(b.datum, v.pohyb.datum))[0];
+    if (!shoda) continue;
+    pouzite.add(shoda.id);
+    v.stav = 'rucne';
+    v.nahraditPlatbuId = shoda.id;
+    v.duvod = `Možná už zapsáno ručně (${castka} Kč, ${shoda.datum}) – nahradit ruční záznam, nebo je to jiná platba?`;
+  }
 }
 
 /**
  * Převede potvrzené rozhodnutí uživatele na změny dat.
- * rozhodnuti: pole { klic, akce: 'zapsat' | 'nenajem' | 'nenajemVzdy' | 'preskocit', najemnikId, zapamatovatUcet }
- * @returns { platby: nové platby, najemnici: změnění nájemníci, pravidla: nová pravidla }
+ * rozhodnuti: pole { klic, akce: 'zapsat' | 'nahradit' | 'nenajem' | 'nenajemVzdy' | 'preskocit', najemnikId, zapamatovatUcet }
+ *   'nahradit' = zapsat z výpisu a smazat odpovídající ruční záznam (nahraditPlatbuId)
+ * @returns { platby: nové platby, smazatPlatby: id ručních záznamů, najemnici: změnění nájemníci, pravidla }
  */
 export function prevedImport(vypis, vysledky, rozhodnuti, najemnici, pravidla, noveId) {
   const podleKlice = new Map(vysledky.map(v => [v.klic, v]));
   const zmeneni = new Map();
   const nova = { nenajemUcty: [...pravidla.nenajemUcty], ignorovane: [...pravidla.ignorovane] };
-  const platby = [];
+  const platby = [], smazatPlatby = [];
 
   for (const r of rozhodnuti) {
     const v = podleKlice.get(r.klic);
     if (!v || v.stav === 'duplicita') continue;
     const { pohyb } = v;
-    if (r.akce === 'zapsat') {
+    if (r.akce === 'zapsat' || r.akce === 'nahradit') {
+      if (r.akce === 'nahradit' && v.nahraditPlatbuId) smazatPlatby.push(v.nahraditPlatbuId);
       const n = zmeneni.get(r.najemnikId) ?? najemnici.find(x => x.id === r.najemnikId);
       if (!n) throw new Error('Neznámý nájemník.');
       platby.push({
@@ -137,7 +165,7 @@ export function prevedImport(vypis, vysledky, rozhodnuti, najemnici, pravidla, n
         castka: Math.round(pohyb.castkaHal / 100),
         poznamka: pohyb.zprava.slice(0, 200),
         zdroj: {
-          klic: v.klic, banka: vypis.banka, ucet: vypis.ucet, castkaHal: pohyb.castkaHal,
+          typ: 'vypis', klic: v.klic, banka: vypis.banka, ucet: vypis.ucet, castkaHal: pohyb.castkaHal,
           protiucet: pohyb.protiucet, nazevProtiuctu: pohyb.nazevProtiuctu, vs: pohyb.vs,
         },
       });
@@ -152,7 +180,7 @@ export function prevedImport(vypis, vysledky, rozhodnuti, najemnici, pravidla, n
     }
     // 'preskocit' = nic, při dalším importu se zeptá znovu
   }
-  return { platby, najemnici: [...zmeneni.values()], pravidla: nova };
+  return { platby, smazatPlatby, najemnici: [...zmeneni.values()], pravidla: nova };
 }
 
 // Výchozí rozhodnutí pro náhled: jisté zapsat, „není nájem“ ignorovat, návrhy a neznámé čekají na potvrzení.

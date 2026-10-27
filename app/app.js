@@ -4,7 +4,7 @@ import {
   vytvorZalohu, nactiZalohu, castkaPredpisu, mesicZData, predpisVMesici,
 } from './logika.js';
 
-const VERZE_APLIKACE = '0.1';
+const VERZE_APLIKACE = '0.2';
 const app = document.getElementById('app');
 const data = { najemnici: [], platby: [], posledniZaloha: null };
 
@@ -28,6 +28,15 @@ function toast(text) {
   t.classList.add('videt');
   clearTimeout(toast.casovac);
   toast.casovac = setTimeout(() => t.classList.remove('videt'), 2200);
+}
+
+const BANKY = { fio: 'Fio', cs: 'Česká spořitelna', kb: 'Komerční banka' };
+function zdrojText(p) {
+  const typ = p.zdroj?.typ;
+  if (typ === 'vypis') return `<span class="zdroj vypis">Výpis · ${esc(BANKY[p.zdroj.banka] ?? p.zdroj.banka)}</span>`;
+  if (typ === 'hotove') return '<span class="zdroj">Hotově</span>';
+  if (typ === 'prevod') return '<span class="zdroj">Převod – ručně</span>';
+  return '<span class="zdroj">Ručně</span>';
 }
 
 const jdi = cesta => location.replace(`#/${cesta}`);
@@ -104,7 +113,7 @@ function detail(id, zalozka) {
 
   const seznamPlateb = platby.length
     ? `<ul class="seznam platby">${platby.map(p => `<li><a href="#/p/${p.id}">
-        <span class="jmeno">${datumCz(p.datum)}${p.poznamka ? `<small>${esc(p.poznamka)}</small>` : ''}</span>
+        <span class="jmeno">${datumCz(p.datum)}<small>${zdrojText(p)}${p.poznamka ? ` · ${esc(p.poznamka)}` : ''}</small></span>
         <span class="castka">${kc(p.castka)}</span></a></li>`).join('')}</ul>`
     : '<p class="prazdne">Zatím žádná platba.</p>';
 
@@ -171,6 +180,11 @@ function formPlatba(najemnikId, platbaId) {
     <label>Datum<input name="datum" type="date" required value="${p?.datum ?? dnes()}"></label>
     <label>Částka (Kč)<input name="castka" inputmode="numeric" autocomplete="off" required
       value="${p?.castka ?? aktualniNajem(n, dnes())}"></label>
+    ${p?.zdroj?.typ === 'vypis'
+      ? `<p class="pole-info">Importováno z výpisu (${esc(BANKY[p.zdroj.banka] ?? p.zdroj.banka)}, ${esc(p.zdroj.ucet)})${p.zdroj.protiucet ? ` · plátce ${esc(p.zdroj.protiucet)}` : ''}${p.zdroj.vs ? ` · VS ${esc(p.zdroj.vs)}` : ''}</p>`
+      : `<fieldset class="volba"><legend>Způsob platby</legend>
+        <label><input type="radio" name="zpusob" value="hotove" ${p?.zdroj?.typ === 'hotove' ? 'checked' : ''}> Hotově</label>
+        <label><input type="radio" name="zpusob" value="prevod" ${p?.zdroj?.typ === 'prevod' ? 'checked' : ''}> Převodem</label></fieldset>`}
     <label>Poznámka<input name="poznamka" maxlength="200" value="${esc(p?.poznamka)}" placeholder="nepovinné"></label>`,
   { smazat: !!p });
 
@@ -179,7 +193,13 @@ function formPlatba(najemnikId, platbaId) {
     const datum = f.hodnota('datum'), castka = parseCastka(f.hodnota('castka'));
     if (!/^\d{4}-\d{2}-\d{2}$/.test(datum)) return f.chyba('Vyplňte datum.');
     if (!castka) return f.chyba('Částka musí být kladné celé číslo (v korunách).');
-    await db.uloz('platby', { id: p?.id ?? crypto.randomUUID(), najemnikId: n.id, datum, castka, poznamka: f.hodnota('poznamka') });
+    let zdroj = p?.zdroj;
+    if (zdroj?.typ !== 'vypis') {
+      const zpusob = f.form.elements.zpusob.value;
+      if (!zpusob) return f.chyba('Vyberte způsob platby: hotově, nebo převodem.');
+      zdroj = { typ: zpusob };
+    }
+    await db.uloz('platby', { ...p, id: p?.id ?? crypto.randomUUID(), najemnikId: n.id, datum, castka, poznamka: f.hodnota('poznamka'), zdroj });
     await nacti();
     toast(p ? 'Platba upravena' : 'Platba uložena');
     jdi(`n/${n.id}`);

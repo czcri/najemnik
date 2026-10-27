@@ -96,11 +96,12 @@ try {
 
   await jdi(`#/n/${nid}/platba`);
   over((await js('document.querySelector("form").elements.castka.value')) === '10000', 'částka platby předvyplněna nájmem');
-  await vypln({ datum: '2026-10-05', castka: '10000', poznamka: 'hotově' });
+  await vypln({ datum: '2026-10-05', castka: '10000', zpusob: 'hotove', poznamka: 'za říjen' });
   await jdi(`#/n/${nid}/platba`);
-  await vypln({ datum: '2026-10-10', castka: '15000' });
+  await vypln({ datum: '2026-10-10', castka: '15000', zpusob: 'prevod' });
   t = await text();
   over(t.includes('Tento měsíc ještě chybí') && /5\s000/.test(t) && !t.includes('Dluh po splatnosti'), '3: dluh 0, tento měsíc chybí 5 000');
+  over(t.includes('Hotově') && t.includes('Převod – ručně'), 'zdroj platby u plateb');
   await snimek('detail-platby');
 
   await jdi(`#/n/${nid}/mesice`);
@@ -129,7 +130,7 @@ try {
   await snimek('prehled');
 
   await jdi(`#/n/${nid}/platba`);
-  await js(`document.querySelector('form').elements.castka.value = '12,50'; document.querySelector('form').requestSubmit()`);
+  await js(`document.querySelector('form').elements.castka.value = '12,50'; document.querySelector('form').elements.zpusob.value = 'hotove'; document.querySelector('form').requestSubmit()`);
   await pockej(200);
   over((await text()).includes('kladné celé číslo'), 'chybná částka se odmítne');
   await snimek('formular-chyba');

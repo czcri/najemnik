@@ -115,3 +115,24 @@ test('import → platby, zapamatování účtu, opakovaný import = duplicita', 
   assert.equal(dalsi.stav, 'jiste');
   assert.equal(dalsi.najemnikId, 'petr');
 });
+
+test('ručně zapsaný převod: import nabídne nahrazení, hotovost ne', () => {
+  const p = pohyb({ protiucet: '111/0800', datum: '2026-10-07' });
+  const rucni = { id: 'r1', najemnikId: 'jana', datum: '2026-10-05', castka: 12000, zdroj: { typ: 'prevod' } };
+  const v = jeden(p, { platby: [rucni] });
+  assert.equal(v.stav, 'rucne');
+  assert.equal(v.nahraditPlatbuId, 'r1');
+  assert.equal(vychoziRozhodnuti([v])[0].akce, 'preskocit', 'nikdy automaticky');
+
+  // hotovost, jiná částka nebo víc než 5 dní → běžné přiřazení
+  assert.equal(jeden(p, { platby: [{ ...rucni, zdroj: { typ: 'hotove' } }] }).stav, 'jiste');
+  assert.equal(jeden(p, { platby: [{ ...rucni, castka: 11000 }] }).stav, 'jiste');
+  assert.equal(jeden(p, { platby: [{ ...rucni, datum: '2026-09-30' }] }).stav, 'jiste');
+  // platba z pilotu bez zdroje se bere jako ruční převod
+  assert.equal(jeden(p, { platby: [{ ...rucni, zdroj: undefined }] }).stav, 'rucne');
+
+  const z = prevedImport(vypis(p), [v], [{ klic: v.klic, akce: 'nahradit', najemnikId: 'jana' }], NAJ, prazdnaPravidla(), () => 'n1');
+  assert.deepEqual(z.smazatPlatby, ['r1']);
+  assert.equal(z.platby[0].zdroj.typ, 'vypis');
+  assert.equal(z.platby[0].datum, '2026-10-07', 'datum z výpisu');
+});

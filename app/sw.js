@@ -1,5 +1,5 @@
 // Offline: aplikace se načítá z mezipaměti telefonu. Při každém vydání zvýšit VERZE.
-const VERZE = 'najemnik-1';
+const VERZE = 'najemnik-2';
 const SOUBORY = [
   './', 'index.html', 'styly.css', 'app.js', 'logika.js', 'db.js', 'manifest.webmanifest',
   'ikony/ikona-192.png', 'ikony/ikona-512.png', 'ikony/ikona-maskable-512.png',
