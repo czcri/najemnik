@@ -2,7 +2,7 @@
 
 Jednoduchá aplikace do telefonu (Android) pro pronajímatele: nájemníci, měsíční nájem, platby, dluh.
 
-- **Aplikace:** https://petrvg.github.io/najemnik/ → v Chrome menu ⋮ → *Přidat na plochu* / *Instalovat aplikaci*.
+- **Aplikace:** https://czcri.github.io/najemnik/ → v Chrome menu ⋮ → *Přidat na plochu* / *Instalovat aplikaci*.
 - **Data** jsou jen v telefonu (IndexedDB). Na webu je pouze program. Zálohu dělá aplikace (Nastavení / výzva na přehledu).
 - **Specifikace:** [docs/specifikace.md](docs/specifikace.md) · **Stav:** [STAV.md](STAV.md)
 

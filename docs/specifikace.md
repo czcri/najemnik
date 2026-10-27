@@ -17,7 +17,7 @@ Používá ji jeden člověk (pronajímatel) na jednom telefonu.
 
 **Rozhodnuto: varianta A.**
 
-**Kde bude na webu:** na webu je jen *program* (HTML/JS), ne data. Návrh: **GitHub Pages** (zdarma, účet petrvg), adresa typu `https://petrvg.github.io/najemnik/`. Telefon si ji jednou otevře, nainstaluje na plochu a dál běží i bez internetu; aktualizace si stáhne sám, když je online. Zdarma GitHub Pages vyžaduje veřejné repo – kód nic citlivého neobsahuje. Pokud má být i kód neveřejný: Cloudflare Pages / Vercel (zdarma, soukromé repo).
+**Kde bude na webu:** na webu je jen *program* (HTML/JS), ne data. Návrh: **GitHub Pages** (zdarma, účet czcri), adresa `https://czcri.github.io/najemnik/`. Telefon si ji jednou otevře, nainstaluje na plochu a dál běží i bez internetu; aktualizace si stáhne sám, když je online. Zdarma GitHub Pages vyžaduje veřejné repo – kód nic citlivého neobsahuje. Pokud má být i kód neveřejný: Cloudflare Pages / Vercel (zdarma, soukromé repo).
 
 **Data** (nájemníci, platby) jsou jen v telefonu (IndexedDB) + měsíční záloha e-mailem. Pokud by se úložiště ukázalo jako slabé místo, lze aplikaci zabalit do nativní bez přepisování.
 
