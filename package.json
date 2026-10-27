@@ -3,7 +3,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test tests/logika.test.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "over-vypisy": "node nastroje/over-vypisy.mjs",
     "smoke": "node nastroje/smoke.mjs"
+  },
+  "devDependencies": {
+    "pdfjs-dist": "^4.10.38"
   }
 }

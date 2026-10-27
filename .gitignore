@@ -1,3 +1,11 @@
 node_modules/
 *.json.bak
 najemnik-zaloha-*.json
+
+# vzorové bankovní výpisy – NIKDY do repozitáře (repo je veřejné)
+vzory-vypisu/
+
+# dočasné soubory Office
+~$*
+# pracovní dokumenty uživatele – do veřejného repa jen po domluvě
+lovable zadani/

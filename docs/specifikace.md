@@ -145,3 +145,52 @@ Dnes = 15. 10. 2026.
 ## 10. Otevřené otázky
 
 Žádné – pilot ve stavbě.
+
+## 11. Připravovaný modul: Import bankovních výpisů (návrh, ve fázi zadání)
+
+*Zapsáno 2026-10-27 z rozhovoru, k doplnění.*
+
+**Cíl:** ručně stažený výpis (soubor) z internetového bankovnictví → aplikace najde příchozí nájemné a přiřadí ho nájemníkům; uživatel jen potvrdí. Vše lokálně v telefonu, bez serveru.
+
+**Více účtů:** pronajímatel má víc účtů (i u různých bank). V nastavení seznam „Moje účty“ (číslo účtu, banka, název). Výpis se k účtu přiřadí automaticky podle čísla účtu v souboru. Lze importovat víc výpisů najednou.
+
+**Banky (2026-10-27):** Fio, Komerční banka, Česká spořitelna. Každý nájemník platí na **jeden konkrétní účet** (nové pole „účet pro platby“ u nájemníka → zúží párování, použije se i pro QR platbu).
+
+**Formáty:** ne každá banka umí CSV → aplikace musí číst to, co daná banka nabízí: CSV, XLSX, ABO/GPC, XML a jako poslední možnost **PDF výpis** (textové PDF, čtené lokálně v telefonu). Pro každou banku vlastní čtečka, ověřená na vzorovém výpisu. Fio má navíc bezplatné API – možná pozdější automatika.
+
+**Párování platby → nájemník (v tomto pořadí):**
+
+Realita (2026-10-27): nájemníci mají vyplňovat VS, ale ne vždy to udělají; většinou platí ze svého jednoho účtu. → **Hlavní klíč je účet plátce**, VS je pojistka.
+
+1. **Známý účet plátce** (zapamatovaný u nájemníka, může jich mít víc) a platba přišla na účet, kam nájemník platí → přiřazeno jistě, i bez VS.
+2. **VS nájemníka** → přiřazeno jistě; je-li účet plátce nový, aplikace nabídne „zapamatovat účet pro příště“.
+3. **Rozpor** (účet patří nájemníkovi A, VS nájemníkovi B) → jen návrh, nutné potvrzení.
+4. Jméno plátce / zpráva pro příjemce ~ jméno nájemníka → jen **návrh**, nutné potvrzení (a nabídka zapamatovat účet).
+5. Nic nesedí → „Nepřiřazené“: ručně vybrat nájemníka (účet se zapamatuje), nebo „Není nájem“ (jednorázově / natrvalo pro účet plátce).
+
+Po prvním importu, kdy se účty nájemníků naučí, by mělo být přiřazení téměř vždy automatické.
+
+**Pravidla:**
+- Odchozí platby se ignorují.
+- **Bez duplicit:** opakovaný import téhož nebo překrývajícího se výpisu nezapíše platbu dvakrát (identifikace podle ID pohybu v bance, jinak podle účtu + data + částky + protiúčtu + VS).
+- Platba z výpisu se uloží jako běžná platba s odkazem na zdroj (účet, výpis); dál jde upravit/smazat. Hotovost se zapisuje ručně jako dosud.
+- Náhled před uložením: „Nalezeno 12 příchozích plateb: 9 přiřazeno jistě, 2 návrhy, 1 nepřiřazená“.
+
+**Související:** QR platba pro nájemníka (účet, VS, částka) – snižuje počet nepřiřazených plateb.
+
+**Platby, které nejsou nájem:** na účty chodí i jiné platby → „Není nájem“ (jednorázově nebo natrvalo pro účet plátce); platby od neznámých plátců jdou do „Nepřiřazené“, nikdy se nepřiřadí automaticky jen podle částky.
+
+**Vzorové výpisy (dodány 2026-10-27, `vzory-vypisu/`, mimo git – skutečná data nikdy do dokumentace ani testů):**
+
+| Banka | Formát | Kódování | Číslo vlastního účtu | Poznámky ke čtení |
+|---|---|---|---|---|
+| Fio (2010) | CSV „Pohyby na účtu“ | UTF-8 s BOM, `;`, uvozovky | **jen v názvu souboru** (`Pohyby_na_uctu-<účet>_…`) → jinak zeptat se | částka `11093` / `-11411,77` (desetinná čárka); sloupce Protiúčet + Kód banky zvlášť; Zpráva pro příjemce, Poznámka, Název protiúčtu, VS (sloupec VS je v hlavičce 2×); typy „Bezhotovostní příjem“, „Okamžitá příchozí platba“ |
+| Česká spořitelna (0800) | CSV (George) | **UTF-16 LE**, `;`, uvozovky | sloupec „Číslo účtu vlastníka“ | částka `110 000,00` (mezery v tisících); protiúčet ve tvaru `číslo/kód`; VS; „Zpráva pro příjemce“; typ „Příchozí úhrada“ |
+| Komerční banka (0100) | **jen PDF** (periodický výpis) | textové PDF | v hlavičce „k účtu: …/0100“ | transakce = blok více řádků: datum, popis (PŘÍCHOZÍ ÚHRADA…), název a číslo protiúčtu, VS/KS/SS, částka (kladná = připsáno); „Zpráva pro příjemce:“ na dalších řádcích; čtení podle pozic sloupců |
+| ČS – PDF | PDF výpis | textové PDF, rozházené pořadí | – | nepoužívat, ČS umí CSV |
+
+**Haléře:** výpisy obsahují haléře; nájemné chodí v celých korunách. Při importu se částka zaokrouhlí na celé Kč (původní hodnota se uloží ke zdroji platby).
+
+**Stav 2026-10-27:** čtečky a párování hotové a otestované (viz STAV.md), chybí obrazovky.
+
+**Postup vývoje:** čtečky (Fio CSV, ČS CSV, KB PDF) + párování jako čistá logika s testy na **vymyšlených** datech ve stejném formátu; kontrola na skutečných vzorech jen lokálně.
