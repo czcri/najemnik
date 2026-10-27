@@ -1,6 +1,6 @@
-// Kouřový test v opravdovém Chrome (headless, přes DevTools protokol, bez závislostí).
-// Projde scénáře ze specifikace kliknutím ve formulářích a uloží snímky obrazovky.
-// Spuštění: node nastroje/smoke.mjs [složka-pro-snímky]
+// Kouřový test aplikace (dist/) v headless Chrome přes DevTools protokol, bez závislostí.
+// Projde hlavní scénáře klikáním ve formulářích a uloží snímky obrazovky.
+// Spuštění: npm run build && npm run smoke -- [složka-pro-snímky]
 import { createServer } from 'node:http';
 import { readFile, mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
@@ -8,17 +8,19 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const KOREN = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'app');
-const SNIMKY = process.argv[2] ?? path.join(tmpdir(), 'najemnik-smoke');
+const KOREN = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'dist');
+const SNIMKY = process.argv[2] ?? path.join(tmpdir(), 'najemnik-smoke-v2');
 const CHROME = process.env.CHROME ?? 'C:/Program Files/Google/Chrome/Application/chrome.exe';
-const TYPY = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.webmanifest': 'application/manifest+json' };
+const TYPY = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.webmanifest': 'application/manifest+json' };
 
 const server = createServer(async (req, res) => {
   const cesta = decodeURIComponent(new URL(req.url, 'http://x').pathname);
+  if (cesta === '/prazdna.html') return res.writeHead(200, { 'content-type': 'text/html' }).end('<!doctype html><title>x</title>');
   const soubor = path.join(KOREN, cesta.endsWith('/') ? cesta + 'index.html' : cesta);
   try {
+    const obsah = await readFile(soubor);
     res.writeHead(200, { 'content-type': TYPY[path.extname(soubor)] ?? 'application/octet-stream' });
-    res.end(await readFile(soubor));
+    res.end(obsah);
   } catch { res.writeHead(404).end(); }
 }).listen(0);
 const URL_APP = `http://localhost:${server.address().port}/`;
@@ -51,16 +53,30 @@ const cdp = (method, params = {}) => new Promise((ok, chyba) => {
 const pockej = ms => new Promise(ok => setTimeout(ok, ms));
 async function js(vyraz) {
   const r = await cdp('Runtime.evaluate', { expression: vyraz, awaitPromise: true, returnByValue: true });
-  if (r.exceptionDetails) throw new Error(`${vyraz}\n${r.exceptionDetails.exception?.description}`);
+  if (r.exceptionDetails) throw new Error(`${vyraz.slice(0, 200)}\n${r.exceptionDetails.exception?.description}`);
   return r.result.value;
 }
-const text = () => js('document.getElementById("app").innerText');
-async function jdi(hash) { await js(`location.hash = ${JSON.stringify(hash)}`); await pockej(150); }
-async function vypln(pole) {
-  await js(`(() => { const f = document.querySelector('form');
-    for (const [k, v] of Object.entries(${JSON.stringify(pole)})) f.elements[k].value = v;
-    f.requestSubmit(); })()`);
+const text = () => js('document.body.innerText');
+async function jdi(hash) { await js(`location.hash = ${JSON.stringify(hash)}`); await pockej(300); }
+// Klik na tlačítko / odkaz podle viditelného textu nebo aria-label.
+async function klik(popis, index = 0) {
+  const ok = await js(`(() => { const p = ${JSON.stringify(popis)};
+    const el = [...document.querySelectorAll('button, a, label')].filter(e => (e.getAttribute('aria-label') ?? e.innerText.trim()) === p || e.innerText.trim() === p)[${index}];
+    if (!el) return false; el.click(); return true; })()`);
+  if (!ok) throw new Error(`Nenalezeno k kliknutí: ${popis}`);
   await pockej(300);
+}
+// Vyplnění pole v Reactu (nativní setter + událost input/change); pole podle popisku <label>.
+async function vypln(pole) {
+  await js(`(() => { for (const [popis, hodnota] of Object.entries(${JSON.stringify(pole)})) {
+    const label = [...document.querySelectorAll('label')].find(l => l.querySelector('span')?.innerText.trim() === popis);
+    const el = label?.querySelector('input, select, textarea');
+    if (!el) throw new Error('Pole nenalezeno: ' + popis);
+    const proto = el instanceof HTMLSelectElement ? HTMLSelectElement : el instanceof HTMLTextAreaElement ? HTMLTextAreaElement : HTMLInputElement;
+    Object.getOwnPropertyDescriptor(proto.prototype, 'value').set.call(el, hodnota);
+    el.dispatchEvent(new Event(el instanceof HTMLSelectElement ? 'change' : 'input', { bubbles: true }));
+  } })()`);
+  await pockej(100);
 }
 let cislo = 0;
 async function snimek(nazev) {
@@ -68,92 +84,142 @@ async function snimek(nazev) {
   await writeFile(path.join(SNIMKY, `${String(++cislo).padStart(2, '0')}-${nazev}.png`), Buffer.from(data, 'base64'));
 }
 let selhani = 0;
-function over(podminka, popis) {
-  console.log(`${podminka ? '✔' : '✖'} ${popis}`);
+function over(podminka, popis, detail = '') {
+  console.log(`${podminka ? '✔' : '✖'} ${popis}${podminka ? '' : ` ${detail}`}`);
   if (!podminka) selhani++;
 }
+const kc = n => new Intl.NumberFormat('cs-CZ').format(n).replace(/\s/g, '\u00a0') + '\u00a0Kč';
 
 try {
   await mkdir(SNIMKY, { recursive: true });
   await cdp('Runtime.enable');
   await cdp('Page.enable');
+  await cdp('DOM.enable');
   await cdp('Emulation.setDeviceMetricsOverride', { width: 393, height: 851, deviceScaleFactor: 2, mobile: true });
-  // Pevné „dnes“ = 15. 10. 2026 jako ve specifikaci.
   await cdp('Page.addScriptToEvaluateOnNewDocument', { source: `{
     const D = Date, T = new D(2026, 9, 15, 12).getTime();
     globalThis.Date = class extends D { constructor(...a) { super(...(a.length ? a : [T])); } static now() { return T; } };
+    window.confirm = () => true;
   }` });
+
+  // 1) Převzetí dat z pilotu: připravit starou databázi 'najemnik' a pak spustit novou verzi.
+  await cdp('Page.navigate', { url: URL_APP + 'prazdna.html' });
+  await pockej(500);
+  await js(`new Promise((ok, chyba) => { const r = indexedDB.open('najemnik', 1);
+    r.onupgradeneeded = () => { const db = r.result; db.createObjectStore('najemnici', { keyPath: 'id' });
+      db.createObjectStore('platby', { keyPath: 'id' }).createIndex('najemnikId', 'najemnikId'); db.createObjectStore('meta'); };
+    r.onsuccess = () => { const tx = r.result.transaction(['najemnici', 'platby'], 'readwrite');
+      tx.objectStore('najemnici').put({ id: 'pilot', jmeno: 'Petra Pilotová', oznaceni: 'Byt P', zacatek: '2026-09', konec: null, predpisy: [{ od: '2026-09', slozky: [{ nazev: 'Nájem', castka: 8000 }] }] });
+      tx.objectStore('platby').put({ id: 'pp', najemnikId: 'pilot', datum: '2026-09-03', castka: 8000 });
+      tx.oncomplete = () { r.result.close(); ok(); }; }; r.onerror = () => chyba(r.error); })`.replace('tx.oncomplete = () {', 'tx.oncomplete = () => {'));
   await cdp('Page.navigate', { url: URL_APP });
-  await pockej(800);
-  over((await text()).includes('Zatím žádní nájemníci'), 'prázdný přehled');
-  await snimek('prazdny-prehled');
-
-  await jdi('#/n/novy');
-  await vypln({ jmeno: 'Test', oznaceni: 'Byt 1', zacatek: '2026-08', castka: '10 000' });
+  await pockej(1500);
   let t = await text();
-  over(/30\s000/.test(t) && /Dluh po splatnosti\s20\s000/.test(t) && /tento měsíc\s10\s000/.test(t), '1: dluh 20 000 + tento měsíc 10 000');
-  const nid = await js('location.hash.split("/")[2]');
+  over(t.includes('1 nájemník'), 'data z pilotu převzata (1 nájemník)', t.slice(0, 200));
+  await jdi('#/najemnici');
+  over((await text()).includes('Petra Pilotová'), 'nájemník z pilotu v seznamu');
 
-  await jdi(`#/n/${nid}/platba`);
-  over((await js('document.querySelector("form").elements.castka.value')) === '10000', 'částka platby předvyplněna nájmem');
-  await vypln({ datum: '2026-10-05', castka: '10000', zpusob: 'hotove', poznamka: 'za říjen' });
-  await jdi(`#/n/${nid}/platba`);
-  await vypln({ datum: '2026-10-10', castka: '15000', zpusob: 'prevod' });
+  // 2) Nový nájemník
+  await klik('Nový nájemník');
+  await vypln({ 'Jméno': 'Jan Testovací', 'Nemovitost': 'Byt 1 – Kolín', 'Nájem od': '2026-08', 'Nájem vč. služeb': '10000', 'Telefon': '777 123 456', 'Variabilní symbol': '1001' });
+  await klik('Uložit');
+  await pockej(500);
   t = await text();
-  over(t.includes('Tento měsíc ještě chybí') && /5\s000/.test(t) && !t.includes('Dluh po splatnosti'), '3: dluh 0, tento měsíc chybí 5 000');
-  over(t.includes('Hotově') && t.includes('Převod – ručně'), 'zdroj platby u plateb');
-  await snimek('detail-platby');
+  over(t.includes('Dluží ' + kc(20000)) && t.includes('chybí ' + kc(10000)), '1: dluh 20 000 + tento měsíc 10 000', t.slice(0, 300));
 
-  await jdi(`#/n/${nid}/mesice`);
+  // 3) Platba hotově
+  await klik('Platba');
+  await vypln({ 'Částka': '10000', 'Datum': '2026-10-05', 'Poznámka': 'za srpen' });
+  await klik('Hotově');
+  await klik('Uložit platbu');
+  await pockej(400);
   t = await text();
-  over(t.includes('chybí 5') && t.includes('srpen 2026'), 'záložka Měsíce');
+  over(t.includes('Dluží ' + kc(10000)) && t.includes('Hotově'), 'platba hotově: dluh 10 000, štítek Hotově');
+
+  // 4) Výdaj (oprava) v září → dluh +2 500
+  await klik('Výdaj / dluh');
+  await vypln({ 'Popis': 'Oprava bojleru', 'Částka (Kč)': '2500', 'Datum': '2026-09-10' });
+  await klik('Uložit');
+  await pockej(400);
+  t = await text();
+  over(t.includes('Dluží ' + kc(12500)), 'výdaj zvýšil dluh na 12 500', t.slice(0, 300));
+  await snimek('detail');
+  await klik('Měsíce');
+  t = await text();
+  over(t.includes('Dluh kum.') && t.includes('výdaj ' + kc(2500)), 'záložka Měsíce s kumulativním dluhem a výdajem');
   await snimek('detail-mesice');
+  const nid = await js('location.hash.split("/").pop()');
 
-  const pid = await js(`(() => { const a = [...document.querySelectorAll('a')].find(x => x.href.includes('#/p/')); return a ? a.hash.slice(4) : ''; })()`);
-  await jdi(`#/n/${nid}`);
-  const druha = await js(`[...document.querySelectorAll('.platby a')].find(a => a.innerText.includes('15'))?.hash.slice(4)`);
-  await jdi(`#/p/${druha}`);
-  await vypln({ castka: '25000' });
+  // 5) Vložit platbu – výsledek po uložení
+  await jdi('#/vlozit-platbu');
+  await vypln({ 'Částka': '5000' });
+  await klik('Převodem');
+  await klik('Uložit platbu');
+  await pockej(500);
   t = await text();
-  over(t.includes('Přeplatek') && /5\s000/.test(t), '4: přeplatek 5 000');
+  over(t.includes('Zbývá dluh'), 'vložit platbu: výsledek „Zbývá dluh…“', t.slice(0, 300));
+  await snimek('vlozit-vysledek');
 
-  await jdi(`#/n/${nid}/najem`);
-  await vypln({ od: '2026-11', castka: '11000' });
-  t = await text();
-  over(/Nájem 10\s000/.test(t), '6: říjen pořád 10 000');
-
-  await jdi(`#/n/novy`);
-  await vypln({ jmeno: 'Bára Dlužná', oznaceni: 'Byt 2 – Kolín', zacatek: '2026-09', castka: '8000' });
+  // 6) Přehled, dlužníci, platby, statistiky, nastavení
   await jdi('#/');
+  await pockej(500);
   t = await text();
-  over(t.indexOf('Bára') < t.indexOf('Test') && t.includes('Tento měsíc ještě není záloha'), 'přehled: dlužník nahoře, výzva k záloze');
+  over(t.includes('Rychlé akce') && t.includes('Zálohovat'), 'přehled s dlaždicemi a odznakem Zálohovat');
   await snimek('prehled');
-
-  await jdi(`#/n/${nid}/platba`);
-  await js(`document.querySelector('form').elements.castka.value = '12,50'; document.querySelector('form').elements.zpusob.value = 'hotove'; document.querySelector('form').requestSubmit()`);
-  await pockej(200);
-  over((await text()).includes('kladné celé číslo'), 'chybná částka se odmítne');
-  await snimek('formular-chyba');
-
+  await jdi('#/dluznici');
+  t = await text();
+  over(t.includes('Jan Testovací') && t.includes('Celkem po splatnosti'), 'dlužníci');
+  await klik('Upomínka');
+  t = await text();
+  const zprava = await js('document.querySelector("textarea")?.value ?? ""');
+  over(t.includes('Upomínka po splatnosti') && zprava.startsWith('Dobrý den Jan Testovací') && zprava.includes('VS 1001'), 'upomínka: šablona doplněná o jméno a VS', zprava);
+  await snimek('upominka');
+  await klik('Zavřít');
+  await jdi('#/platby');
+  await snimek('platby');
+  await jdi('#/statistiky');
+  await pockej(800);
+  t = await text();
+  over(t.includes('Příjmy po měsících') && t.includes('Hotově vs. na účet') && t.includes('Data a záloha'), 'statistiky s grafy a zálohou');
+  await snimek('statistiky');
   await jdi('#/nastaveni');
+  t = await text();
+  over(t.includes('Šablony zpráv') && t.includes('Moje účty'), 'nastavení');
   await snimek('nastaveni');
 
-  // Záloha → smazat data → obnova
-  const zaloha = await js(`import('./logika.js').then(async l => { const d = await import('./db.js');
-    return JSON.stringify(l.vytvorZalohu(await d.vsechny('najemnici'), await d.vsechny('platby'), 'x')); })`);
-  await js(`import('./db.js').then(d => d.nahradVse([], []))`);
-  await jdi('#/');
-  await cdp('Page.reload');
-  await pockej(800);
-  over((await text()).includes('Zatím žádní nájemníci'), 'data smazána');
-  await js(`import('./db.js').then(async d => { const l = await import('./logika.js'); const z = l.nactiZalohu(${JSON.stringify(zaloha)}); await d.nahradVse(z.najemnici, z.platby); })`);
-  await cdp('Page.reload');
+  // 7) Import výpisu Fio (vymyšlená data)
+  const csv = '\ufeff"Datum";"Objem";"Měna";"Protiúčet";"Kód banky";"Zpráva pro příjemce";"Poznámka";"Typ";"Název banky";"Název protiúčtu";"Reference plátce";"KS";"VS";"SS";"VS"\r\n'
+    + '"20.10.2026";"7500";"CZK";"1234567890";"3030";"najem";"Jan Testovací";"Bezhotovostní příjem";"Air Bank";"Jan Testovací";"";"";"1001";"";"1001"\r\n'
+    + '"21.10.2026";"999";"CZK";"5555555555";"0800";"";"";"Bezhotovostní příjem";"ČS";"Pojišťovna";"";"";"";"";""\r\n';
+  const soubor = path.join(profil, 'Pohyby_na_uctu-2200000001_20261001-20261031.csv');
+  await writeFile(soubor, csv);
+  await jdi('#/import');
+  const { root } = await cdp('DOM.getDocument');
+  const { nodeId } = await cdp('DOM.querySelector', { nodeId: root.nodeId, selector: 'input[type=file]' });
+  await cdp('DOM.setFileInputFiles', { nodeId, files: [soubor] });
   await pockej(800);
   t = await text();
-  over(t.includes('Bára') && t.includes('Test'), '7: obnova ze zálohy');
+  over(t.includes('Fio banka · 2200000001/2010'), 'import: soubor rozpoznán', t.slice(0, 400));
+  await klik('Spárovat platby');
+  t = await text();
+  over(t.includes('1 přiřazeno') && t.includes('1 nepřiřazeno'), 'import: 1 přiřazeno (VS), 1 nepřiřazeno', t.slice(0, 500));
+  await snimek('import-nahled');
+  await klik('Zapsat 1 platbu');
+  await pockej(500);
+  await jdi(`#/najemnici/${nid}`);
+  t = await text();
+  over(t.includes('Výpis · Fio') && t.includes('Vše zaplaceno') === false, 'importovaná platba v detailu se štítkem Výpis · Fio');
+  // znovu stejný výpis → duplicita
+  await jdi('#/import');
+  const d2 = await cdp('DOM.getDocument');
+  const n2 = await cdp('DOM.querySelector', { nodeId: d2.root.nodeId, selector: 'input[type=file]' });
+  await cdp('DOM.setFileInputFiles', { nodeId: n2.nodeId, files: [soubor] });
+  await pockej(800);
+  await klik('Spárovat platby');
+  t = await text();
+  over(t.includes('0 přiřazeno') && t.includes('Zapsat 0 plateb'), 'opakovaný import nezapíše platbu znovu', t.slice(0, 400));
 
-  over(await js('navigator.serviceWorker.getRegistration().then(r => !!r)'), 'service worker zaregistrován');
-  over(chyby.length === 0, `bez chyb v konzoli${chyby.length ? ': ' + chyby.join(' | ') : ''}`);
+  over(chyby.length === 0, 'bez chyb v konzoli', chyby.join(' | '));
 } catch (e) {
   console.log('✖', e.message);
   selhani++;

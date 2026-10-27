@@ -4,7 +4,7 @@
 import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
-import { jePdf, nactiCsvVypis, nactiKbPdf, castkaNaHalere } from '../app/vypisy.js';
+import { jePdf, nactiCsvVypis, nactiKbPdf, castkaNaHalere } from '../core/vypisy.js';
 
 const slozka = process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : 'vzory-vypisu';
 const detail = process.argv.includes('--detail');

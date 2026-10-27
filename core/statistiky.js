@@ -63,7 +63,10 @@ export function statistiky(data, od, doMesice, dnes, filtr = {}) {
     const hotove = vMesici.filter(p => zpusobPlatby(p, vsichniPodleId.get(p.najemnikId)) === 'hotove').reduce((s, p) => s + p.castka, 0);
     const ocekavano = stavy.reduce((s, x) => s + (x.melVMesici.get(mesic) ?? 0), 0);
     const den = posledniDen(mesic);
-    const dluh = stavy.reduce((s, x) => s + Math.max(0, x.melDo(mesic) - x.zaplatilDo(den)), 0);
+    // Běžící měsíc ještě není splatný: dluh k dnešku = předpisy ukončených měsíců − dosavadní platby.
+    const dluh = mesic === aktualni
+      ? stavy.reduce((s, x) => s + x.stav.dluh, 0)
+      : stavy.reduce((s, x) => s + Math.max(0, x.melDo(mesic) - x.zaplatilDo(den)), 0);
 
     // Dochvilnost: jen u ukončených měsíců a nájemníků, kteří v měsíci něco měli platit.
     let vcas = 0, pozde = 0, vubec = 0;

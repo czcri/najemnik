@@ -8,7 +8,9 @@ Jednoduchá aplikace v telefonu (Android) pro pronajímatele. Eviduje nájemník
 
 Používá ji jeden člověk (pronajímatel) na jednom telefonu.
 
-## 2. Technické řešení (návrh)
+## 2. Technické řešení
+
+> **Od verze 2.0:** React + Vite + Tailwind + Recharts (`web/`), logika v `core/`, stále PWA bez serveru, data jen v telefonu (IndexedDB `najemnik-v2`). Níže původní rozhodnutí z pilotu.
 
 | Varianta | Popis | Pro | Proti |
 |---|---|---|---|
@@ -195,7 +197,7 @@ Po prvním importu, kdy se účty nájemníků naučí, by mělo být přiřazen
 
 **Postup vývoje:** čtečky (Fio CSV, ČS CSV, KB PDF) + párování jako čistá logika s testy na **vymyšlených** datech ve stejném formátu; kontrola na skutečných vzorech jen lokálně.
 
-## 12. Verze 2 – redesign (zadání 2026-10-27, ve fázi návrhu v Lovable)
+## 12. Verze 2 – redesign (zadání 2026-10-27; vzhled z Lovable, implementováno ve verzi 2.0)
 
 Podrobně: `lovable zadani/zadani-ucesane.txt` (učesané představy uživatele), prompt: `lovable zadani/prompt-pro-lovable.txt` (nahrazuje `docs/lovable-prompt.md`). Složka `lovable zadani/` je mimo git.
 

@@ -1,0 +1,102 @@
+/* Vzhled převzatý z návrhu v Lovable (czcri/NAJEMNIK-APKA), doplněný tmavý režim. */
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
+  --radius-card: 20px;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-soft: var(--primary-soft);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-status-debt: var(--status-debt);
+  --color-status-debt-soft: var(--status-debt-soft);
+  --color-status-due: var(--status-due);
+  --color-status-due-soft: var(--status-due-soft);
+  --color-status-ok: var(--status-ok);
+  --color-status-ok-soft: var(--status-ok-soft);
+  --color-status-over: var(--status-over);
+  --color-status-over-soft: var(--status-over-soft);
+  --color-cash: var(--cash);
+  --color-bank: var(--bank);
+}
+
+:root {
+  --background: oklch(0.972 0.006 250);
+  --foreground: oklch(0.24 0.05 262);
+  --card: oklch(0.995 0.003 85);
+  --primary: oklch(0.55 0.12 162);
+  --primary-foreground: oklch(0.99 0.01 160);
+  --primary-soft: oklch(0.94 0.04 162);
+  --muted: oklch(0.945 0.01 85);
+  --muted-foreground: oklch(0.52 0.03 262);
+  --border: oklch(0.91 0.012 85);
+  --status-debt: oklch(0.56 0.19 25);
+  --status-debt-soft: oklch(0.95 0.03 25);
+  --status-due: oklch(0.66 0.16 55);
+  --status-due-soft: oklch(0.95 0.04 65);
+  --status-ok: oklch(0.55 0.12 162);
+  --status-ok-soft: oklch(0.94 0.04 162);
+  --status-over: oklch(0.55 0.15 250);
+  --status-over-soft: oklch(0.94 0.03 250);
+  --bank: oklch(0.55 0.15 250);
+  --cash: oklch(0.6 0.12 175);
+  --gradient-hero: linear-gradient(145deg, oklch(0.5 0.12 165), oklch(0.4 0.09 185));
+  --gradient-navy: radial-gradient(120% 90% at 100% 0%, oklch(0.45 0.13 170 / 0.55), transparent 55%), linear-gradient(160deg, oklch(0.27 0.06 262), oklch(0.2 0.05 265));
+  --shadow-card: 0 1px 2px oklch(0.24 0.05 262 / 0.04), 0 8px 24px -12px oklch(0.24 0.05 262 / 0.12);
+  --shadow-hero: 0 14px 30px -12px oklch(0.45 0.12 165 / 0.5);
+  --shadow-navy: 0 24px 40px -18px oklch(0.2 0.05 265 / 0.55);
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: oklch(0.17 0.02 262);
+    --foreground: oklch(0.95 0.01 250);
+    --card: oklch(0.22 0.025 262);
+    --primary: oklch(0.7 0.13 162);
+    --primary-foreground: oklch(0.18 0.03 170);
+    --primary-soft: oklch(0.3 0.05 162);
+    --muted: oklch(0.27 0.02 262);
+    --muted-foreground: oklch(0.72 0.03 262);
+    --border: oklch(0.32 0.02 262);
+    --status-debt: oklch(0.72 0.17 25);
+    --status-debt-soft: oklch(0.3 0.07 25);
+    --status-due: oklch(0.8 0.14 65);
+    --status-due-soft: oklch(0.32 0.06 60);
+    --status-ok: oklch(0.75 0.13 162);
+    --status-ok-soft: oklch(0.3 0.05 162);
+    --status-over: oklch(0.75 0.12 250);
+    --status-over-soft: oklch(0.3 0.06 250);
+    --bank: oklch(0.72 0.13 250);
+    --cash: oklch(0.75 0.12 175);
+    --shadow-card: none;
+    color-scheme: dark;
+  }
+}
+
+@layer base {
+  * { border-color: var(--color-border); -webkit-tap-highlight-color: transparent; }
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  input, select, textarea, button { font: inherit; color: inherit; }
+}
+
+@utility card-soft { background: var(--card); border-radius: 20px; box-shadow: var(--shadow-card); }
+@utility card-soft-2 { background: var(--card); border-radius: 24px; border: 1px solid var(--border); box-shadow: var(--shadow-card); }
+@utility card-hero { background: var(--gradient-hero); color: oklch(0.99 0.01 160); border-radius: 20px; box-shadow: var(--shadow-hero); }
+@utility card-navy { background: var(--gradient-navy); color: oklch(0.98 0.005 250); border-radius: 28px; box-shadow: var(--shadow-navy); }
+@utility tabular { font-variant-numeric: tabular-nums; }
+
+@keyframes vyjet { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes objevit { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.animace-panel { animation: vyjet 0.22s ease-out; }
+.animace-toast { animation: objevit 0.2s ease-out; }

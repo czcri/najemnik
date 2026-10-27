@@ -1,4 +1,4 @@
-# Zveřejní složku app/ na GitHub Pages po každém pushi do main (jen když projdou testy).
+# Zveřejní aplikaci na GitHub Pages po každém pushi do main (jen když projdou testy a build).
 name: Pages
 on:
   push:
@@ -22,10 +22,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
+      - run: npm ci
       - run: npm test
+      - run: npm run build
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: app
+          path: dist
       - id: deployment
         uses: actions/deploy-pages@v4

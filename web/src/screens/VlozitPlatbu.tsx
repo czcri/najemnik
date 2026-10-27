@@ -1,0 +1,119 @@
+import { useMemo, useState, type FormEvent } from 'react';
+import { Link } from 'react-router-dom';
+import { Banknote, CheckCircle2, Landmark, Search } from 'lucide-react';
+import { AppShell, Chyba, Main, Pole, Prepinac, Tlacitko, VSTUP, ZpusobIkona, useToast } from '../components/ui';
+import { vysledekPoPlatbe } from '../components/formulare';
+import { useData } from '../data/store';
+import { aktualniNajem, parseCastka, stavNajemnika } from '../lib/core';
+import { kc, noveId } from '../lib/format';
+
+const bezDiakritiky = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+
+export default function VlozitPlatbu() {
+  const { data, dnes, prehled, akce } = useData();
+  const toast = useToast();
+  const aktivni = prehled.filter(r => !r.ukonceny);
+  const [id, setId] = useState(aktivni.find(r => r.dluh + r.tentoMesic > 0)?.najemnik.id ?? aktivni[0]?.najemnik.id ?? '');
+  const [hledat, setHledat] = useState('');
+  const r = prehled.find(x => x.najemnik.id === id);
+  const navrh = (x = r) => x ? String(Math.max(x.najem, x.dluh + x.tentoMesic) || x.najem) : '';
+  const [castka, setCastka] = useState(navrh());
+  const [zpusob, setZpusob] = useState<'prevod' | 'hotove'>(r?.najemnik.zpusobPlaceni === 'hotove' ? 'hotove' : 'prevod');
+  const [datum, setDatum] = useState(dnes);
+  const [poznamka, setPoznamka] = useState('');
+  const [chyba, setChyba] = useState<string | null>(null);
+  const [hotovo, setHotovo] = useState<{ jmeno: string; castka: number; text: string; ok: boolean; id: string } | null>(null);
+
+  const nabidka = useMemo(() => aktivni.filter(x => bezDiakritiky(x.najemnik.jmeno + ' ' + x.najemnik.oznaceni).includes(bezDiakritiky(hledat))), [aktivni, hledat]);
+
+  function vyber(novyId: string) {
+    const x = prehled.find(y => y.najemnik.id === novyId);
+    setId(novyId);
+    setCastka(navrh(x));
+    setZpusob(x?.najemnik.zpusobPlaceni === 'hotove' ? 'hotove' : 'prevod');
+    setHledat('');
+  }
+
+  async function uloz(e: FormEvent) {
+    e.preventDefault();
+    if (!r) return setChyba('Vyberte nájemníka.');
+    const c = parseCastka(castka);
+    if (!c) return setChyba('Částka musí být kladné celé číslo v korunách.');
+    const platba = { id: noveId(), najemnikId: r.najemnik.id, datum, castka: c, poznamka: poznamka.trim(), zdroj: { typ: zpusob } as const };
+    await akce.ulozPlatbu(platba);
+    // Výsledek spočítat hned z nových dat (stav v kontextu se obnoví až po překreslení).
+    const s = stavNajemnika(r.najemnik, [...data.platby.filter(p => p.najemnikId === r.najemnik.id), platba], dnes, data.vydaje.filter(v => v.najemnikId === r.najemnik.id));
+    toast('Platba uložena');
+    setHotovo({ jmeno: r.najemnik.jmeno, castka: c, id: r.najemnik.id, ...vysledekPoPlatbe(s) });
+  }
+
+  if (hotovo) {
+    return (
+      <AppShell title="Vložit platbu">
+        <Main className="flex flex-col items-center pt-12 text-center">
+          <span className={`flex size-20 items-center justify-center rounded-full ${hotovo.ok ? 'bg-status-ok-soft text-status-ok' : 'bg-status-due-soft text-status-due'}`}><CheckCircle2 className="size-10" /></span>
+          <h2 className={`mt-6 text-2xl font-extrabold ${hotovo.ok ? '' : 'text-status-debt'}`}>{hotovo.text}</h2>
+          <p className="mt-2 text-muted-foreground">{hotovo.jmeno} · {kc(hotovo.castka)} · {zpusob === 'prevod' ? 'převodem' : 'hotově'}</p>
+          <Tlacitko className="mt-8" onClick={() => { setHotovo(null); setPoznamka(''); vyber(id); }}>Zapsat další platbu</Tlacitko>
+          <Link to={`/najemnici/${hotovo.id}`} className="mt-3 flex h-14 w-full items-center justify-center rounded-[20px] bg-muted font-bold">Detail nájemníka</Link>
+        </Main>
+      </AppShell>
+    );
+  }
+
+  if (aktivni.length === 0) {
+    return <AppShell title="Vložit platbu"><Main><p className="card-soft-2 p-8 text-center text-sm text-muted-foreground">Nejdřív přidejte nájemníka. <Link to="/najemnici" className="font-bold text-primary">Nájemníci</Link></p></Main></AppShell>;
+  }
+
+  return (
+    <AppShell title="Vložit platbu" subtitle="Rychlý zápis">
+      <Main>
+        <form onSubmit={uloz} className="space-y-5">
+          <div>
+            <p className="mb-2 px-2 text-sm font-bold text-muted-foreground">Nájemník</p>
+            {r && !hledat && (
+              <div className="card-soft-2 flex items-center gap-3 p-4">
+                <ZpusobIkona m={r.najemnik.zpusobPlaceni ?? 'ucet'} />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-bold">{r.najemnik.jmeno}</p>
+                  <p className="truncate text-xs text-muted-foreground">{r.najemnik.oznaceni} · nájem {kc(aktualniNajem(r.najemnik, dnes))}
+                    {r.dluh > 0 && <span className="font-bold text-status-debt"> · dluh {kc(r.dluh)}</span>}
+                    {r.tentoMesic > 0 && <span className="font-bold text-status-due"> · tento měsíc {kc(r.tentoMesic)}</span>}</p>
+                </div>
+              </div>
+            )}
+            <label className="card-soft mt-2 flex min-h-12 items-center gap-3 px-4">
+              <Search className="size-5 text-muted-foreground" />
+              <input value={hledat} onChange={e => setHledat(e.target.value)} placeholder="Změnit nájemníka – hledat" className="h-12 flex-1 bg-transparent text-[15px] outline-none" />
+            </label>
+            {hledat && (
+              <div className="card-soft-2 mt-2 max-h-64 divide-y divide-border overflow-y-auto">
+                {nabidka.map(x => (
+                  <button type="button" key={x.najemnik.id} onClick={() => vyber(x.najemnik.id)} className="flex w-full items-center gap-3 px-4 py-3 text-left active:bg-muted">
+                    <span className="flex-1"><b className="block text-sm">{x.najemnik.jmeno}</b><span className="text-xs text-muted-foreground">{x.najemnik.oznaceni}</span></span>
+                  </button>
+                ))}
+                {nabidka.length === 0 && <p className="p-4 text-center text-sm text-muted-foreground">Nikdo neodpovídá.</p>}
+              </div>
+            )}
+          </div>
+          <Pole label="Částka">
+            <div className="card-soft flex h-20 items-center px-5">
+              <input inputMode="numeric" value={castka} onChange={e => setCastka(e.target.value)} className="min-w-0 flex-1 bg-transparent text-[34px] font-extrabold tabular outline-none" />
+              <span className="text-xl font-bold text-muted-foreground">Kč</span>
+            </div>
+          </Pole>
+          <Pole label="Způsob platby">
+            <Prepinac hodnota={zpusob} onChange={setZpusob} volby={[{ k: 'prevod', l: 'Převodem', i: Landmark }, { k: 'hotove', l: 'Hotově', i: Banknote }]} />
+          </Pole>
+          <div className="grid grid-cols-2 gap-3">
+            <Pole label="Datum"><input type="date" value={datum} onChange={e => setDatum(e.target.value)} className={VSTUP} /></Pole>
+            <Pole label="Poznámka"><input value={poznamka} onChange={e => setPoznamka(e.target.value)} placeholder="nepovinné" className={VSTUP} /></Pole>
+          </div>
+          <Chyba text={chyba} />
+          <Tlacitko type="submit" disabled={!r}>Uložit platbu</Tlacitko>
+        </form>
+      </Main>
+    </AppShell>
+  );
+}

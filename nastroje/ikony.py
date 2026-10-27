@@ -2,7 +2,7 @@
 from PIL import Image, ImageDraw
 from pathlib import Path
 
-CIL = Path(__file__).resolve().parent.parent / 'app' / 'ikony'
+CIL = Path(__file__).resolve().parent.parent / 'web' / 'public' / 'ikony'
 MODRA, BILA, ZLATA = (31, 95, 139), (255, 255, 255), (242, 178, 51)
 
 def ikona(velikost, maskable):

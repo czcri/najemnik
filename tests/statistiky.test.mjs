@@ -79,8 +79,9 @@ test('statistiky: příjmy po měsících, účet vs. hotově, očekáváno, dlu
   assert.equal(s.prijato, 33000);
   assert.equal(s.prijatoHotove, 8000);
   assert.equal(s.ocekavano, 54000);
-  // dluh na konci listopadu: účetní 10 000 (zaplatil až v prosinci), hotovostní 3 000
-  assert.deepEqual(s.mesice.map(m => m.dluh), [0, 13000, 21000]);
+  // dluh na konci listopadu: účetní 10 000 (zaplatil až v prosinci), hotovostní 3 000;
+  // prosinec ještě běží → jen dluh po splatnosti k dnešku (hotovostní 3 000)
+  assert.deepEqual(s.mesice.map(m => m.dluh), [0, 13000, 3000]);
   // říjen: oba včas; listopad: účetní pozdě (doplatil v prosinci), hotovostní vůbec (chybí 3 000)
   assert.deepEqual(s.mesice.map(m => [m.vcas, m.pozde, m.vubec]), [[2, 0, 0], [0, 1, 1], [0, 0, 0]]);
   // aktuální dluh po splatnosti (prosinec ještě běží): hotovostní 3 000

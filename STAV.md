@@ -23,3 +23,16 @@ Další kroky (import):
 - UI: Nastavení → Moje účty; u nájemníka VS, „platí na účet“, účty plátce; obrazovka Import (výběr souborů → náhled jistě/návrhy/nepřiřazené → potvrzení).
 - pdf.js do `app/vendor/` (offline) pro čtení KB PDF v telefonu.
 - Záloha musí nově obsahovat i pravidla importu (nenajemUcty, ignorovane) a „Moje účty“.
+
+## 2026-10-27 – verze 2.0: nový vzhled (podle Lovable) + všechny funkce zadání v2
+
+Hotovo:
+- Přechod na React (Vite, Tailwind, Recharts) ve `web/`; logika přesunuta do `core/` (sdílená, testovaná). Pilotní `app/` odstraněna (je v historii gitu).
+- Obrazovky: přehled (karta měsíce + 6 dlaždic s živými čísly, odznak Zálohovat), nájemníci (hledání, filtry stav / účet / hotově), detail (stav, měl/zaplatil, malý graf účet/hotově vs. měl, záložky Platby / Měsíce s kumulativním dluhem / Výdaje), platby (stav měsíce), dlužníci (poznámka k dluhu, zavolat, upomínka), vložit platbu (výsledek po uložení), statistiky (filtry, KPI, příjmy po měsících, hotově vs. účet, vývoj dluhu, dochvilnost, tabulka, záloha), import (Fio/ČS/KB, náhled skupin, ruční převody, duplicity), nastavení (šablony zpráv, moje účty, pravidla „není nájem“).
+- Formuláře: nájemník (způsob placení, oslovení, VS, účty plátce, konec nájmu), platba (hotově / převodem, štítek zdroje), jednorázový výdaj / dluh, změna nájmu.
+- Data: nová DB `najemnik-v2` (+ výdaje, upomínky, nastavení); automatické převzetí dat z pilotu; záloha v2 (načte i zálohu z pilotu).
+- Testy: 43 testů `core/` + kouřový test v Chrome (17 kontrol vč. převzetí dat z pilotu a importu výpisu).
+
+Další kroky / nápady:
+- Uživatel vyzkouší v telefonu → připomínky.
+- Návrhy na později: QR platba, kauce, zámek PIN, notifikace 1. v měsíci, export statistik, součet hotovosti pro účetnictví.
