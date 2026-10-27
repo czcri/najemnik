@@ -1,5 +1,7 @@
 # Prompt pro Lovable – design aplikace Nájemník
 
+> **Nahrazeno** souborem `lovable zadani/prompt-pro-lovable.txt` (verze 2, 2026-10-27).
+
 Vložit do Lovable jako první zprávu. Části v [hranatých závorkách] doplnit / smazat.
 
 ---

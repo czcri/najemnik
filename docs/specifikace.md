@@ -194,3 +194,17 @@ Po prvním importu, kdy se účty nájemníků naučí, by mělo být přiřazen
 **Stav 2026-10-27:** čtečky a párování hotové a otestované (viz STAV.md), chybí obrazovky.
 
 **Postup vývoje:** čtečky (Fio CSV, ČS CSV, KB PDF) + párování jako čistá logika s testy na **vymyšlených** datech ve stejném formátu; kontrola na skutečných vzorech jen lokálně.
+
+## 12. Verze 2 – redesign (zadání 2026-10-27, ve fázi návrhu v Lovable)
+
+Podrobně: `lovable zadani/zadani-ucesane.txt` (učesané představy uživatele), prompt: `lovable zadani/prompt-pro-lovable.txt` (nahrazuje `docs/lovable-prompt.md`). Složka `lovable zadani/` je mimo git.
+
+Změny proti pilotu:
+- Úvod = 6 dlaždic s živými čísly: Nájemníci, Platby (stav aktuálního měsíce), Dlužníci, Vložit platbu, Záloha, Import z banky.
+- Nájemník navíc: e-mail, účty plátce (víc), VS, **poznámka k dluhu** s datem (co řekl naposledy).
+- **Jednorázový výdaj / dluh** (nová entita `Vydaj`: datum, částka, popis) – navyšuje „měl zaplatit“; slouží i pro počáteční dluh, protože evidence začíná od 10/2026. → úprava `stavNajemnika`.
+- Záložka Měsíce: poslední sloupec **dluh kumulativně**.
+- Dlužníci: poslední platba (kolik, kdy), zavolat, upomínka (SMS/WhatsApp/e-mail).
+- Vložit platbu: výběr nájemníka + výsledek po uložení (uhrazeno / zbývá / přeplatek).
+- Záloha: připomínka po **60 dnech** (místo každý měsíc).
+- Návrhy na později (nerozhodnuto): QR platba, kauce, graf příjmů, zámek PIN, notifikace 1. v měsíci.
