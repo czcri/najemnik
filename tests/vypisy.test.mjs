@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   dekoduj, parseCsv, castkaNaHalere, datumZCz, normalizujUcet, nactiCsvVypis, nactiKbPdf, jePdf,
-} from '../app/vypisy.js';
+} from '../core/vypisy.js';
 
 const utf8sBom = text => new Uint8Array([0xef, 0xbb, 0xbf, ...new TextEncoder().encode(text)]);
 function utf16le(text) {

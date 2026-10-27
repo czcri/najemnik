@@ -1,7 +1,7 @@
 // Párování plateb z výpisu na nájemníky (spec. kap. 11) – vymyšlená data.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { sparuj, prevedImport, vychoziRozhodnuti, klicePohybu, prazdnaPravidla } from '../app/parovani.js';
+import { sparuj, prevedImport, vychoziRozhodnuti, klicePohybu, prazdnaPravidla } from '../core/parovani.js';
 
 const MUJ = '2200000001/2010';
 const pohyb = (o = {}) => ({

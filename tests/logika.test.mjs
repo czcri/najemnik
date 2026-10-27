@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {
   stavNajemnika, souhrn, zmenNajem, aktualniNajem, potrebaZalohy, parseCastka,
   vytvorZalohu, nactiZalohu, rozsahMesicu,
-} from '../app/logika.js';
+} from '../core/logika.js';
 
 const DNES = '2026-10-15';
 const test1 = () => ({
@@ -136,8 +136,8 @@ test('parsování částky', () => {
 test('7: záloha tam a zpět, poškozená záloha se odmítne', () => {
   const n = [test1()];
   const p = [platba('p1', '2026-10-05', 10000)];
-  const text = JSON.stringify(vytvorZalohu(n, p, '2026-11-01T10:00:00Z'));
-  assert.deepEqual(nactiZalohu(text), { najemnici: n, platby: p });
+  const text = JSON.stringify(vytvorZalohu({ najemnici: n, platby: p }, '2026-11-01T10:00:00Z'));
+  assert.deepEqual(nactiZalohu(text), { najemnici: n, platby: p, vydaje: [], upominky: [], nastaveni: {} });
   assert.throws(() => nactiZalohu('{"a":1}'), /není záloha/);
   assert.throws(() => nactiZalohu('nesmysl'), /není záloha/);
   const spatna = JSON.parse(text);
