@@ -1,0 +1,9 @@
+{
+  "name": "najemnik",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/logika.test.mjs",
+    "smoke": "node nastroje/smoke.mjs"
+  }
+}
