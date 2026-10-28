@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CalendarPlus, ChevronRight, Database, Download, Plus, Trash2 } from 'lucide-react';
-import { AppShell, Card, Main, Nadpis, Pole, Tlacitko, VSTUP, useToast } from '../components/ui';
+import { AppShell, Card, Main, Nadpis, Panel, Pole, Tlacitko, VSTUP, useToast } from '../components/ui';
+import { LogoSimplySoftware } from '../components/logo';
 import { useData } from '../data/store';
 import { VYCHOZI_SABLONY } from '../data/vychozi';
 import { aktualniNajem, icsHotovosti, mesicZData, normalizujUcet, odkazKalendare } from '../lib/core';
@@ -9,7 +10,7 @@ import { datumCz, kc, noveId, posunMesic } from '../lib/format';
 import { ZNACKY, doplnSablonu } from '../lib/zpravy';
 import type { Najemnik, Sablona } from '../types';
 
-export const VERZE_APLIKACE = '2.1.3';
+export const VERZE_APLIKACE = '2.2';
 
 const UKAZKA: Najemnik = {
   id: 'x', jmeno: 'Jana Nováková', osloveni: 'paní Nováková', oznaceni: 'Byt 2 – Kolín', zacatek: '2026-01', konec: null,
@@ -134,7 +135,11 @@ export default function Nastaveni() {
           <span className="h-7 w-12 rounded-full bg-muted" />
         </div>
 
-        <p className="mt-8 text-center text-xs text-muted-foreground">Nájemník {VERZE_APLIKACE} · data jsou uložena jen v tomto telefonu</p>
+        <div className="mt-10 flex flex-col items-center gap-2 text-center">
+          <p className="text-xs text-muted-foreground">Nájemník {VERZE_APLIKACE} · data jsou uložena jen v tomto telefonu</p>
+          <p className="mt-2 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">Vytvořilo</p>
+          <LogoSimplySoftware className="block h-10" />
+        </div>
         <div className="h-4" />
         <Tlacitko typ="vedlejsi" onClick={() => location.reload()}>Načíst znovu</Tlacitko>
       </Main>
@@ -183,5 +188,20 @@ function Kalendar() {
         </>
       )}
     </>
+  );
+}
+
+export function PanelOAplikaci({ onClose }: { onClose: () => void }) {
+  return (
+    <Panel title="O aplikaci" onClose={onClose}>
+      <div className="flex flex-col items-center pb-2 text-center">
+        <img src="ikony/ikona-192.png" alt="" className="size-20 rounded-3xl shadow-lg" />
+        <p className="mt-4 text-2xl font-extrabold">Nájemník</p>
+        <p className="text-sm text-muted-foreground">verze {VERZE_APLIKACE}</p>
+        <p className="mt-3 text-sm text-muted-foreground">Nájemníci, nájem a platby. Data jsou uložena jen v tomto telefonu.</p>
+        <p className="mt-8 mb-3 text-xs font-semibold tracking-wider text-muted-foreground uppercase">Vytvořilo</p>
+        <LogoSimplySoftware varianta="pod" className="block h-20" />
+      </div>
+    </Panel>
   );
 }

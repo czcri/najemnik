@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 const KOREN = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'dist');
 const SNIMKY = process.argv[2] ?? path.join(tmpdir(), 'najemnik-smoke-v2');
 const CHROME = process.env.CHROME ?? 'C:/Program Files/Google/Chrome/Application/chrome.exe';
-const TYPY = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.webmanifest': 'application/manifest+json' };
+const TYPY = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.webmanifest': 'application/manifest+json', '.svg': 'image/svg+xml' };
 
 const server = createServer(async (req, res) => {
   const cesta = decodeURIComponent(new URL(req.url, 'http://x').pathname);
@@ -114,8 +114,15 @@ try {
       tx.objectStore('platby').put({ id: 'pp', najemnikId: 'pilot', datum: '2026-09-03', castka: 8000 });
       tx.oncomplete = () { r.result.close(); ok(); }; }; r.onerror = () => chyba(r.error); })`.replace('tx.oncomplete = () {', 'tx.oncomplete = () => {'));
   await cdp('Page.navigate', { url: URL_APP });
-  await pockej(1500);
+  await pockej(500);
   let t = await text();
+  over(t.toLowerCase().includes('vytvořilo') && await js(`!!document.querySelector('[aria-label="Úvodní obrazovka"]')`), 'úvodní obrazovka s „Vytvořilo“ a logem');
+  await pockej(300);
+  over(await js(`[...document.querySelectorAll('img[alt="Simply Software"]')].every(i => i.complete && i.naturalWidth > 0)`), 'logo Simply Software se načetlo');
+  await snimek('uvod', false);
+  await pockej(1800);
+  over(!(await js(`!!document.querySelector('[aria-label="Úvodní obrazovka"]')`)), 'úvodní obrazovka sama zmizí');
+  t = await text();
   over(t.includes('1 nájemník'), 'data z pilotu převzata (1 nájemník)', t.slice(0, 200));
   await jdi('#/najemnici');
   over((await text()).includes('Petra Pilotová'), 'nájemník z pilotu v seznamu');
@@ -167,6 +174,11 @@ try {
   t = await text();
   over(t.includes('Rychlé akce') && t.includes('Zálohovat'), 'přehled s dlaždicemi a odznakem Zálohovat');
   await snimek('prehled');
+  await klik('O aplikaci');
+  t = await text();
+  over(t.includes('verze 2.2') && t.toLowerCase().includes('vytvořilo'), 'panel O aplikaci z loga v záhlaví');
+  await snimek('o-aplikaci', false);
+  await klik('Zavřít');
   await jdi('#/dluznici');
   t = await text();
   over(t.includes('Jan Testovací') && t.includes('Celkem po splatnosti'), 'dlužníci');

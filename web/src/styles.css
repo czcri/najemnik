@@ -23,6 +23,7 @@
   --color-status-over-soft: var(--status-over-soft);
   --color-cash: var(--cash);
   --color-bank: var(--bank);
+  --color-brand: var(--brand);
 }
 
 :root {
@@ -45,6 +46,7 @@
   --status-over-soft: oklch(0.94 0.03 250);
   --bank: oklch(0.55 0.15 250);
   --cash: oklch(0.6 0.12 175);
+  --brand: #117; /* Simply Software */
   --gradient-hero: linear-gradient(145deg, oklch(0.5 0.12 165), oklch(0.4 0.09 185));
   --gradient-navy: radial-gradient(120% 90% at 100% 0%, oklch(0.45 0.13 170 / 0.55), transparent 55%), linear-gradient(160deg, oklch(0.27 0.06 262), oklch(0.2 0.05 265));
   --shadow-card: 0 1px 2px oklch(0.24 0.05 262 / 0.04), 0 8px 24px -12px oklch(0.24 0.05 262 / 0.12);
@@ -74,6 +76,7 @@
     --status-over-soft: oklch(0.3 0.06 250);
     --bank: oklch(0.72 0.13 250);
     --cash: oklch(0.75 0.12 175);
+    --brand: oklch(0.88 0.04 275);
     --shadow-card: none;
     color-scheme: dark;
   }
@@ -100,5 +103,7 @@
 @keyframes objevit { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 .bez-posuvniku { scrollbar-width: none; }
 .bez-posuvniku::-webkit-scrollbar { display: none; }
+@keyframes uvod-zmizet { to { opacity: 0; visibility: hidden; } }
+@keyframes uvod-objevit { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 .animace-panel { animation: vyjet 0.22s ease-out; }
 .animace-toast { animation: objevit 0.2s ease-out; }

@@ -10,3 +10,6 @@ vzory-vypisu/
 # pracovní dokumenty uživatele – do veřejného repa jen po domluvě
 lovable zadani/
 dist/
+
+# zdrojové soubory loga (do aplikace jdou jen odvozené SVG ve web/public/logo)
+logo/

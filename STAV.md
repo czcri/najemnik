@@ -49,3 +49,10 @@ Hotovo (spec. kap. 13):
 - Testy: 49 `core/` + kouřový test 27 kontrol.
 
 Odloženo: widget na plochu + skutečné notifikace (nativní obal Capacitor/APK).
+
+## 2026-10-28 – verze 2.1.1–2.2
+
+- 2.1.1: převzetí hotovosti vyžaduje potvrzení (panel s částkou a datem).
+- 2.1.2: hlavní karta začíná stranou Hotovost.
+- 2.1.3: nová verze se v telefonu projeví hned (index.html bez HTTP cache, reload po převzetí řízení novým SW); návrat z pozadí → strana Hotovost.
+- 2.2: logo Simply Software – úvodní obrazovka „Vytvořilo“, symbol v záhlaví → O aplikaci, patička Nastavení (spec. kap. 14).

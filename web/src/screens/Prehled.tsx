@@ -1,4 +1,6 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
+import { SymbolSS } from '../components/logo';
+import { PanelOAplikaci } from './Nastaveni';
 import { Link, useSearchParams } from 'react-router-dom';
 import { HlavniKarta, useHotovostDnes, type HlavniKartaRef } from '../components/HlavniKarta';
 import { AlertTriangle, BarChart3, Banknote, Building2, ChevronRight, FileUp, Plus, Users, Wallet, type LucideIcon } from 'lucide-react';
@@ -41,6 +43,7 @@ export default function Prehled() {
   const zaplatilo = aktivni.filter(r => r.tentoMesic === 0 && r.mel > 0).length;
   const zaloha = zalohaStara(data.nastaveni.posledniZaloha, dnes, data.najemnici.length > 0);
   const karta = useRef<HlavniKartaRef>(null);
+  const [oAplikaci, setOAplikaci] = useState(false);
   const [parametry] = useSearchParams();
   const uvodni = { hotovost: 0, mesic: 1, ucet: 2 }[parametry.get('karta') ?? ''] ?? 0;
   const hotovost = useHotovostDnes();
@@ -69,11 +72,15 @@ export default function Prehled() {
     <AppShell active="Přehled">
       <header className="flex items-center gap-3 px-6 pt-8 pb-4">
         <div className="flex size-11 items-center justify-center rounded-2xl card-navy"><Building2 className="size-5" /></div>
-        <div>
+        <div className="flex-1">
           <h1 className="text-xl font-extrabold tracking-tight">Nájemník</h1>
           <p className="text-sm font-medium text-muted-foreground">{NazevMesice(mesic)}</p>
         </div>
+        <button aria-label="O aplikaci" onClick={() => setOAplikaci(true)} className="flex size-12 items-center justify-center rounded-full card-soft text-brand">
+          <SymbolSS className="size-8" />
+        </button>
       </header>
+      {oAplikaci && <PanelOAplikaci onClose={() => setOAplikaci(false)} />}
 
       <Main>
         {(hotovost.dnes.length > 0 || hotovost.poTerminu.length > 0) && (

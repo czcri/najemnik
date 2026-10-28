@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { HashRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { DataProvider, useData } from './data/store';
 import { ToastProvider } from './components/ui';
+import { Uvod } from './components/Uvod';
 import Prehled from './screens/Prehled';
 import Najemnici from './screens/Najemnici';
 import Detail from './screens/Detail';
@@ -50,6 +51,7 @@ export default function App() {
       <DataProvider>
         <ToastProvider>
           <Obrazovky />
+          <Uvod />
         </ToastProvider>
       </DataProvider>
     </HashRouter>
