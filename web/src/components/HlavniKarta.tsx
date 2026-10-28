@@ -1,4 +1,4 @@
-// Posuvná hlavní karta na přehledu (spec. kap. 13): Měsíc · Hotovost · Na účet.
+// Posuvná hlavní karta na přehledu (spec. kap. 13): Hotovost · Měsíc · Na účet (po otevření Hotovost).
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { Check, ChevronRight, FileUp } from 'lucide-react';
@@ -30,7 +30,7 @@ export const HlavniKarta = forwardRef<HlavniKartaRef, { mesic: ReactNode; uvodni
     return () => ro.disconnect();
   }, []);
 
-  const strany = [{ nazev: 'Měsíc', obsah: mesic }, { nazev: 'Hotovost', obsah: <StranaSeznamu zpusob="hotove" /> }, { nazev: 'Na účet', obsah: <StranaSeznamu zpusob="ucet" /> }];
+  const strany = [{ nazev: 'Hotovost', obsah: <StranaSeznamu zpusob="hotove" /> }, { nazev: 'Měsíc', obsah: mesic }, { nazev: 'Na účet', obsah: <StranaSeznamu zpusob="ucet" /> }];
   return (
     <div>
       <div ref={pas} onScroll={e => setStrana(Math.round(e.currentTarget.scrollLeft / e.currentTarget.clientWidth))}

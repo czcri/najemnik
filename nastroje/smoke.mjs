@@ -199,6 +199,7 @@ try {
   await pockej(400);
   t = await text();
   over(t.includes('Dnes čekáš hotovost: Hana Hotová'), 'banner „Dnes čekáš hotovost“', t.slice(0, 300));
+  over(await js(`document.querySelector('.snap-x').scrollLeft`) < 2 && t.indexOf('Hotovost · ') < t.indexOf('Přišlo tento měsíc'), 'po otevření je první strana Hotovost');
   await klik('Ukázat Hotovost');
   await pockej(600);
   t = await text();
@@ -228,7 +229,7 @@ try {
   over(t.includes(kc(5000)) && t.includes('chybí z ' + kc(9000)), 'částečné převzetí: chybí 5 000 z 9 000', t.slice(0, 600));
   await pockej(800);
   const posun = await js(`(() => { const el = document.querySelector('.snap-x'); return [el.scrollLeft, el.clientWidth]; })()`);
-  over(Math.abs(posun[0] - posun[1]) < 2, 'karta zůstala na straně Hotovost', JSON.stringify(posun));
+  over(posun[0] < 2, 'karta zůstala na straně Hotovost (první strana)', JSON.stringify(posun));
   await snimek('karta-hotovost-castecne', false);
   await klik('Ukázat Na účet');
   await pockej(600);

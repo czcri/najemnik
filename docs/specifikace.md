@@ -218,9 +218,9 @@ Změny proti pilotu:
 
 ## 13. Posuvná hlavní karta: Hotovost a Na účet (odsouhlaseno a implementováno 2026-10-28, verze 2.1)
 
-**Hlavní karta na přehledu je posuvná do strany** (tečky pod kartou):
-1. **Měsíc** – jako dosud (přišlo, % vybráno, dluh po splatnosti, očekáváno).
-2. **Hotovost** – kontrolní seznam převzetí hotovosti v aktuálním měsíci.
+**Hlavní karta na přehledu je posuvná do strany** (tečky pod kartou); po otevření se ukáže **Hotovost** (pořadí změněno 2026-10-28):
+1. **Hotovost** – kontrolní seznam převzetí hotovosti v aktuálním měsíci.
+2. **Měsíc** – jako dosud (přišlo, % vybráno, dluh po splatnosti, očekáváno).
 3. **Na účet** – kdo z platících převodem už v tomto měsíci zaplatil (připraveno; závisí na tom, kdy se nahrávají výpisy – viz níže).
 
 **Nájemník – nové pole** „Hotovost čekám k … dni v měsíci“ (1–31, jen u způsobu placení Hotově).

@@ -42,7 +42,7 @@ export default function Prehled() {
   const zaloha = zalohaStara(data.nastaveni.posledniZaloha, dnes, data.najemnici.length > 0);
   const karta = useRef<HlavniKartaRef>(null);
   const [parametry] = useSearchParams();
-  const uvodni = { hotovost: 1, ucet: 2 }[parametry.get('karta') ?? ''] ?? 0;
+  const uvodni = { hotovost: 0, mesic: 1, ucet: 2 }[parametry.get('karta') ?? ''] ?? 0;
   const hotovost = useHotovostDnes();
 
   const dlazdice: Dlazdice[] = [
@@ -77,7 +77,7 @@ export default function Prehled() {
 
       <Main>
         {(hotovost.dnes.length > 0 || hotovost.poTerminu.length > 0) && (
-          <button onClick={() => karta.current?.ukaz(1)} className="mb-3 flex w-full items-center gap-3 rounded-2xl bg-status-due-soft px-4 py-3 text-left text-sm">
+          <button onClick={() => karta.current?.ukaz(0)} className="mb-3 flex w-full items-center gap-3 rounded-2xl bg-status-due-soft px-4 py-3 text-left text-sm">
             <Banknote className="size-5 shrink-0 text-status-due" />
             <span className="flex-1">
               {hotovost.dnes.length > 0 && <b className="block">Dnes čekáš hotovost: {hotovost.dnes.map(p => `${p.najemnik.jmeno} (${kc(p.chybi)})`).join(', ')}</b>}
