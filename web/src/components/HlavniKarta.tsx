@@ -27,8 +27,11 @@ export const HlavniKarta = forwardRef<HlavniKartaRef, { mesic: ReactNode; uvodni
     if (!el) return;
     const ro = new ResizeObserver(() => ukaz(aktualni.current, false));
     ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
+    // Návrat do aplikace z pozadí = „otevření“ → zase první strana (Hotovost).
+    const navrat = () => { if (document.visibilityState === 'visible') ukaz(uvodni, false); };
+    document.addEventListener('visibilitychange', navrat);
+    return () => { ro.disconnect(); document.removeEventListener('visibilitychange', navrat); };
+  }, [uvodni]);
 
   const strany = [{ nazev: 'Hotovost', obsah: <StranaSeznamu zpusob="hotove" /> }, { nazev: 'Měsíc', obsah: mesic }, { nazev: 'Na účet', obsah: <StranaSeznamu zpusob="ucet" /> }];
   return (

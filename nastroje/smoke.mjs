@@ -231,6 +231,11 @@ try {
   const posun = await js(`(() => { const el = document.querySelector('.snap-x'); return [el.scrollLeft, el.clientWidth]; })()`);
   over(posun[0] < 2, 'karta zůstala na straně Hotovost (první strana)', JSON.stringify(posun));
   await snimek('karta-hotovost-castecne', false);
+  await klik('Ukázat Měsíc');
+  await pockej(600);
+  await js(`document.dispatchEvent(new Event('visibilitychange'))`); // návrat aplikace z pozadí
+  await pockej(300);
+  over(await js(`document.querySelector('.snap-x').scrollLeft`) < 2, 'návrat z pozadí → zase strana Hotovost');
   await klik('Ukázat Na účet');
   await pockej(600);
   await snimek('karta-na-ucet', false);

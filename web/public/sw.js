@@ -1,7 +1,7 @@
 // Offline: aplikace se po prvním načtení spouští z mezipaměti telefonu.
 // Stránka (index.html) se zkouší nejdřív ze sítě, aby se nová verze projevila hned;
 // ostatní soubory mají v názvu otisk obsahu, takže stačí mezipaměť.
-const MEZIPAMET = 'najemnik-v2';
+const MEZIPAMET = 'najemnik-v2.1.3';
 
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', e => {
@@ -18,7 +18,8 @@ self.addEventListener('fetch', e => {
     const cache = await caches.open(MEZIPAMET);
     if (stranka) {
       try {
-        const odpoved = await fetch(r);
+        // no-store: GitHub Pages posílá max-age=600, jinak by se po vydání až 10 minut spouštěla stará verze.
+        const odpoved = await fetch(r, { cache: 'no-store' });
         cache.put(r, odpoved.clone());
         return odpoved;
       } catch {
