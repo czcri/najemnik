@@ -50,6 +50,17 @@ test('výdaj v měsíci navýší částku; den hotovosti dnes', () => {
   assert.equal(adam.poTerminu, false);
 });
 
+test('platí dopředu: v listopadu se čeká platba za prosinec; zářijová platba „za říjen“ se počítá za říjen', () => {
+  const dopredu = { ...N[1], platiDopredu: true };
+  const s = seznamMesice([dopredu], [], [], '2026-11-10', 'hotove');
+  assert.equal(s.polozky[0].zaMesic, '2026-12');
+  const zaplaceno = seznamMesice([dopredu], [{ ...platba('Adam', '2026-11-04', 10000), zaMesic: '2026-12' }], [], '2026-11-10', 'hotove');
+  assert.equal(zaplaceno.polozky.length, 0);
+  // běžný nájemník: platba v říjnu „za listopad“ se do listopadu počítá
+  const s2 = seznamMesice([N[1]], [{ ...platba('Adam', '2026-10-28', 10000), zaMesic: '2026-11' }], [], '2026-11-10', 'hotove');
+  assert.equal(s2.polozky.length, 0);
+});
+
 test('strana Na účet', () => {
   assert.deepEqual(seznamMesice(N, [], [], '2026-11-10', 'ucet').polozky.map(p => p.najemnik.id), ['Účetní']);
 });

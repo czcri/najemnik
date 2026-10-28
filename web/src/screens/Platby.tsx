@@ -1,12 +1,11 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
-import { AppShell, Card, Main, Nadpis, ZpusobIkona } from '../components/ui';
+import { AppShell, Card, Main, Nadpis, VolbaMesice, ZpusobIkona } from '../components/ui';
 import { RadekNajemnika } from './Najemnici';
 import { ZdrojStitek } from './Detail';
 import { useData } from '../data/store';
-import { mesicZData, zpusobPlatby } from '../lib/core';
-import { NazevMesice, datumKratce, kc, posunMesic } from '../lib/format';
+import { mesicZData, obdobiPlatby, zpusobPlatby } from '../lib/core';
+import { NazevMesice, datumCz, datumKratce, kc } from '../lib/format';
 
 export default function Platby() {
   const { data, dnes, prehled } = useData();
@@ -23,25 +22,15 @@ export default function Platby() {
   const zaplatili = radkyMesice.filter(x => x.m && x.m.chybi === 0);
   const nezaplatili = radkyMesice.filter(x => x.m && x.m.chybi > 0).sort((a, b) => b.m!.chybi - a.m!.chybi);
   const ocekavano = radkyMesice.reduce((s, x) => s + (x.m?.mel ?? 0), 0);
-  const platbyMesice = data.platby.filter(p => mesicZData(p.datum) === mesic).sort((a, b) => b.datum.localeCompare(a.datum));
-  const prislo = platbyMesice.reduce((s, p) => s + p.castka, 0);
   const podleId = new Map(data.najemnici.map(n => [n.id, n]));
+  // Platby ZA tento měsíc (i ty zaplacené dopředu v předchozím měsíci nebo později jako doplatek).
+  const platbyMesice = data.platby.filter(p => obdobiPlatby(p, podleId.get(p.najemnikId)) === mesic).sort((a, b) => b.datum.localeCompare(a.datum));
+  const prislo = platbyMesice.reduce((s, p) => s + p.castka, 0);
 
   return (
     <AppShell title="Platby" active="Platby">
       <Main>
-        <div className="mb-4 flex items-center gap-2">
-          <button aria-label="Předchozí měsíc" onClick={() => nastav(posunMesic(mesic, -1))} disabled={mesic <= nejstarsi}
-            className="flex size-12 shrink-0 items-center justify-center rounded-full card-soft disabled:opacity-30"><ChevronLeft className="size-5" /></button>
-          <label className="card-soft relative flex h-12 flex-1 items-center justify-center gap-2 font-bold">
-            <CalendarDays className="size-5 text-primary" />{NazevMesice(mesic)}
-            <input type="month" value={mesic} min={nejstarsi} max={aktualni} onChange={e => nastav(e.target.value)}
-              onClick={e => (e.currentTarget as HTMLInputElement & { showPicker?: () => void }).showPicker?.()}
-              aria-label="Vybrat měsíc a rok" className="absolute inset-0 cursor-pointer opacity-0" />
-          </label>
-          <button aria-label="Další měsíc" onClick={() => nastav(posunMesic(mesic, 1))} disabled={mesic >= aktualni}
-            className="flex size-12 shrink-0 items-center justify-center rounded-full card-soft disabled:opacity-30"><ChevronRight className="size-5" /></button>
-        </div>
+        <div className="mb-4"><VolbaMesice hodnota={mesic} min={nejstarsi} max={aktualni} onChange={nastav} /></div>
         {mesic !== aktualni && (
           <button onClick={() => setMesic(aktualni)} className="-mt-2 mb-4 w-full text-center text-sm font-semibold text-primary">Zpět na aktuální měsíc</button>
         )}
@@ -67,9 +56,9 @@ export default function Platby() {
           <Card>{zaplatili.map(({ r }) => <RadekNajemnika key={r.najemnik.id} r={r} vpravo={<p className="text-xs font-bold text-status-ok">Zaplaceno ✓</p>} />)}</Card>
         </>}
 
-        <Nadpis>Přijaté platby · {NazevMesice(mesic)}</Nadpis>
+        <Nadpis>Platby za {NazevMesice(mesic).toLowerCase()}</Nadpis>
         <Card>
-          {platbyMesice.length === 0 && <p className="p-6 text-center text-sm text-muted-foreground">{minuly ? 'V tomto měsíci nepřišla žádná platba.' : 'Tento měsíc zatím žádná platba.'}</p>}
+          {platbyMesice.length === 0 && <p className="p-6 text-center text-sm text-muted-foreground">{minuly ? 'Za tento měsíc nepřišla žádná platba.' : 'Za tento měsíc zatím žádná platba.'}</p>}
           {platbyMesice.map(p => {
             const n = podleId.get(p.najemnikId);
             return (
@@ -77,7 +66,7 @@ export default function Platby() {
                 <ZpusobIkona m={zpusobPlatby(p, n)} />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[15px] font-bold">{n?.jmeno ?? '—'}</p>
-                  <p className="text-xs text-muted-foreground">{datumKratce(p.datum)} <ZdrojStitek p={p} /></p>
+                  <p className="text-xs text-muted-foreground">{mesicZData(p.datum) === mesic ? datumKratce(p.datum) : datumCz(p.datum)} <ZdrojStitek p={p} /></p>
                 </div>
                 <p className="text-sm font-bold text-status-ok tabular">+{kc(p.castka)}</p>
               </Link>

@@ -1,9 +1,9 @@
 // Společné prvky vzhledu (podle návrhu z Lovable).
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Banknote, Home, Landmark, ListChecks, Plus, Settings, Users, X, type LucideIcon } from 'lucide-react';
+import { ArrowLeft, Banknote, CalendarDays, ChevronLeft, ChevronRight, Home, Landmark, ListChecks, Plus, Settings, Users, X, type LucideIcon } from 'lucide-react';
 import { createContext, useCallback, useContext, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { kc } from '../lib/format';
+import { NazevMesice, kc, posunMesic } from '../lib/format';
 import type { Stav, Zpusob } from '../types';
 
 export function AppShell({ children, title, subtitle, active, right }: {
@@ -155,12 +155,39 @@ export function Tlacitko({ children, onClick, typ = 'hlavni', type = 'button', d
   );
 }
 
+// Výběr měsíce: ‹ Říjen 2026 › – šipky po měsících, klepnutí na měsíc = výběr měsíce a roku.
+export function VolbaMesice({ hodnota, onChange, min, max, kompaktni }: {
+  hodnota: string; onChange: (m: string) => void; min?: string; max?: string; kompaktni?: boolean;
+}) {
+  const nastav = (m: string) => {
+    if (!/^\d{4}-\d{2}$/.test(m)) return;
+    onChange(max && m > max ? max : min && m < min ? min : m);
+  };
+  const vyska = kompaktni ? 'h-11' : 'h-12';
+  return (
+    <div className="flex items-center gap-2">
+      <button type="button" aria-label="Předchozí měsíc" onClick={() => nastav(posunMesic(hodnota, -1))} disabled={!!min && hodnota <= min}
+        className={`flex ${vyska} aspect-square shrink-0 items-center justify-center rounded-full card-soft disabled:opacity-30`}><ChevronLeft className="size-5" /></button>
+      <label className={`card-soft relative flex ${vyska} flex-1 items-center justify-center gap-2 font-bold`}>
+        <CalendarDays className="size-5 text-primary" />{NazevMesice(hodnota)}
+        <input type="month" value={hodnota} min={min} max={max} onChange={e => nastav(e.target.value)}
+          onClick={e => (e.currentTarget as HTMLInputElement & { showPicker?: () => void }).showPicker?.()}
+          aria-label="Vybrat měsíc a rok" className="absolute inset-0 cursor-pointer opacity-0" />
+      </label>
+      <button type="button" aria-label="Další měsíc" onClick={() => nastav(posunMesic(hodnota, 1))} disabled={!!max && hodnota >= max}
+        className={`flex ${vyska} aspect-square shrink-0 items-center justify-center rounded-full card-soft disabled:opacity-30`}><ChevronRight className="size-5" /></button>
+    </div>
+  );
+}
+
 // Nápověda pod částkou: odkud se vzala předvyplněná částka.
 export const NapovedaCastky = ({ navrh, mesic }: { navrh: { doplatek: boolean; zaplaceno: number; mel: number }; mesic: string }) =>
   <span className="mt-1 block px-1 text-xs text-muted-foreground">
     {navrh.doplatek
       ? <>Předvyplněn <b className="text-status-due">doplatek za {mesic}</b> – zaplaceno už {kc(navrh.zaplaceno)} z {kc(navrh.mel)}.</>
-      : <>Předvyplněn pravidelný měsíční nájem.</>}
+      : navrh.zaplaceno >= navrh.mel && navrh.mel > 0
+        ? <>{mesic[0].toUpperCase() + mesic.slice(1)} je už zaplacený celý – předvyplněn pravidelný nájem.</>
+        : <>Předvyplněn pravidelný měsíční nájem.</>}
   </span>;
 
 export const Chyba = ({ text }: { text: string | null }) =>

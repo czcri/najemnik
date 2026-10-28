@@ -39,69 +39,111 @@ export function zmenNajem(predpisy, od, castka) {
     .sort((a, b) => a.od.localeCompare(b.od));
 }
 
+// Za který měsíc platba je: uložené „za měsíc“, jinak odvozeně z data podle pravidla nájemníka
+// (kdo platí dopředu, platí v září za říjen). Platby z dřívějších verzí pole nemají.
+export function obdobiPlatby(platba, najemnik) {
+  if (platba.zaMesic) return platba.zaMesic;
+  const m = mesicZData(platba.datum);
+  return najemnik?.platiDopredu ? dalsiMesic(m) : m;
+}
+
+const najemVMesici = (najemnik, mesic) => { const p = predpisVMesici(najemnik, mesic); return p ? castkaPredpisu(p) : 0; };
+
 // vydaje = jednorázové výdaje / dluhy nájemníka { datum, castka, popis } – navyšují „měl zaplatit“ v měsíci data.
+// Platby se počítají do měsíce, za který jsou (obdobiPlatby). Co v měsíci přebývá, doplní nejdřív
+// nejstarší nezaplacené měsíce a zbytek je přeplatek. Platby za budoucí měsíce = předplaceno.
 export function stavNajemnika(najemnik, platby, dnes, vydaje = []) {
   const aktualni = mesicZData(dnes);
-  const posledni = najemnik.konec && najemnik.konec < aktualni ? najemnik.konec : aktualni;
+  const ukonceny = !!najemnik.konec && najemnik.konec < aktualni;
+  const posledni = ukonceny ? najemnik.konec : aktualni;
   const mesice = najemnik.zacatek <= posledni ? rozsahMesicu(najemnik.zacatek, posledni) : [];
   const zaplatil = platby.reduce((s, p) => s + p.castka, 0);
+
+  const zaObdobi = new Map(), budouci = {};
+  for (const p of platby) {
+    let m = obdobiPlatby(p, najemnik);
+    if (mesice.length && m < mesice[0]) m = mesice[0];
+    if (!mesice.length || m > posledni) {
+      if (ukonceny && mesice.length) m = posledni;
+      else { budouci[m] = (budouci[m] ?? 0) + p.castka; continue; }
+    }
+    zaObdobi.set(m, (zaObdobi.get(m) ?? 0) + p.castka);
+  }
   if (!mesice.length) {
-    const preplatek = zaplatil;
-    return { mel: 0, zaplatil, dluh: 0, tentoMesic: 0, preplatek, stav: preplatek > 0 ? 'preplatek' : 'ok', radky: [] };
+    return { mel: 0, zaplatil, dluh: 0, tentoMesic: 0, preplatek: zaplatil, stav: zaplatil > 0 ? 'preplatek' : 'ok', radky: [], budouci };
   }
 
-  // Platby a výdaje do měsíců podle data; mimo rozsah nájmu ke krajnímu měsíci.
-  const doMesicu = polozky => {
-    const mapa = new Map();
-    for (const p of polozky) {
-      let m = mesicZData(p.datum);
-      if (mesice.length) {
-        if (m < mesice[0]) m = mesice[0];
-        if (m > mesice.at(-1)) m = mesice.at(-1);
-      }
-      mapa.set(m, (mapa.get(m) ?? 0) + p.castka);
-    }
-    return mapa;
-  };
-  const podleMesice = doMesicu(platby);
-  // Výdaj s datem v budoucnu se započítá až v jeho měsíci.
-  const vydajeVMesici = doMesicu(vydaje.filter(v => mesicZData(v.datum) <= posledni));
+  // Výdaje do měsíce podle data (mimo rozsah ke krajnímu měsíci); výdaj s datem v budoucnu až v jeho měsíci.
+  const vydajeVMesici = new Map();
+  for (const v of vydaje) {
+    let m = mesicZData(v.datum);
+    if (m > posledni) continue;
+    if (m < mesice[0]) m = mesice[0];
+    vydajeVMesici.set(m, (vydajeVMesici.get(m) ?? 0) + v.castka);
+  }
 
-  let kumMel = 0, kumZaplatil = 0, melUkoncene = 0;
+  // 1) každý měsíc nejdřív platbami za něj; 2) přebytky doplní nejstarší nezaplacené měsíce.
+  let pool = 0;
   const radky = mesice.map(mesic => {
-    const predpis = predpisVMesici(najemnik, mesic);
-    const najem = predpis ? castkaPredpisu(predpis) : 0;
+    const najem = najemVMesici(najemnik, mesic);
     const vydaj = vydajeVMesici.get(mesic) ?? 0;
     const mel = najem + vydaj;
-    const zaplatilVMesici = podleMesice.get(mesic) ?? 0;
-    kumMel += mel;
-    kumZaplatil += zaplatilVMesici;
-    if (mesic < aktualni) melUkoncene += mel;
-    // Kolik z tohoto měsíce ještě chybí, když se všechny platby započtou od nejstaršího.
-    const chybi = Math.max(0, Math.min(mel, kumMel - zaplatil));
-    const stav = chybi === 0 ? 'ok' : mesic === aktualni ? 'bezi' : 'dluh';
-    return { mesic, mel, najem, vydaj, zaplatil: zaplatilVMesici, prubeznyRozdil: kumMel - kumZaplatil, chybi, stav };
+    const zaplatilZa = zaObdobi.get(mesic) ?? 0;
+    const pokryto = Math.min(mel, zaplatilZa);
+    pool += zaplatilZa - pokryto;
+    return { mesic, mel, najem, vydaj, zaplatil: zaplatilZa, pokryto };
+  });
+  for (const r of radky) {
+    const doplnit = Math.min(r.mel - r.pokryto, pool);
+    r.pokryto += doplnit;
+    pool -= doplnit;
+  }
+
+  let kumMel = 0, kumZaplatil = 0;
+  const vysledek = radky.map(r => {
+    kumMel += r.mel;
+    kumZaplatil += r.zaplatil;
+    const chybi = r.mel - r.pokryto;
+    const stav = chybi === 0 ? 'ok' : r.mesic === aktualni ? 'bezi' : 'dluh';
+    const { pokryto, ...zbytek } = r;
+    return { ...zbytek, prubeznyRozdil: kumMel - kumZaplatil, chybi, stav };
   });
 
   const mel = kumMel;
-  const dluh = Math.max(0, melUkoncene - zaplatil);
-  const tentoMesic = Math.max(0, mel - zaplatil - dluh);
-  const preplatek = Math.max(0, zaplatil - mel);
+  const dluh = vysledek.filter(r => r.mesic < aktualni).reduce((s, r) => s + r.chybi, 0);
+  const tentoMesic = vysledek.find(r => r.mesic === aktualni)?.chybi ?? 0;
+  const preplatek = pool + Object.values(budouci).reduce((s, x) => s + x, 0);
   const stav = dluh > 0 ? 'dluh' : tentoMesic > 0 ? 'bezi' : preplatek > 0 ? 'preplatek' : 'ok';
-  return { mel, zaplatil, dluh, tentoMesic, preplatek, stav, radky };
+  return { mel, zaplatil, dluh, tentoMesic, preplatek, stav, radky: vysledek, budouci };
 }
 
-// Předvyplněná částka nové platby: pravidelný měsíční nájem; jen když už v aktuálním měsíci
-// část přišla (platby s datem v tomto měsíci), doplatek do celého předpisu měsíce (nájem + výdaje).
+// Návrh nové platby: za který měsíc a kolik.
+// Měsíc: nejstarší nezaplacený ukončený měsíc (dluh), jinak běžný měsíc / u „platí dopředu“ příští,
+// a pokud je už celý zaplacený, další nezaplacený. Částka: pravidelný nájem toho měsíce,
+// nebo doplatek, když už za něj část přišla. zaMesic lze zadat (uživatel změnil měsíc).
 // platby a vydaje = jen tohoto nájemníka.
-export function navrhPlatby(najemnik, platby, dnes, vydaje = []) {
-  const najem = aktualniNajem(najemnik, dnes);
-  const mesic = mesicZData(dnes);
-  const radek = stavNajemnika(najemnik, platby, dnes, vydaje).radky.find(r => r.mesic === mesic);
-  const zaplaceno = platby.filter(p => mesicZData(p.datum) === mesic).reduce((s, p) => s + p.castka, 0);
-  const chybi = radek ? radek.mel - zaplaceno : 0;
-  if (zaplaceno > 0 && chybi > 0) return { castka: chybi, doplatek: true, zaplaceno, mel: radek.mel };
-  return { castka: najem, doplatek: false, zaplaceno, mel: radek?.mel ?? najem };
+export function navrhPlatby(najemnik, platby, dnes, vydaje = [], zaMesic = null) {
+  const aktualni = mesicZData(dnes);
+  const s = stavNajemnika(najemnik, platby, dnes, vydaje);
+  const pokrytiMesice = m => {
+    const r = s.radky.find(x => x.mesic === m);
+    if (r) return { mel: r.mel, najem: r.najem, pokryto: r.mel - r.chybi };
+    const najem = najemVMesici(najemnik, m) || aktualniNajem(najemnik, dnes);
+    return { mel: najem, najem, pokryto: Math.min(najem, s.budouci?.[m] ?? 0) };
+  };
+  let m = zaMesic;
+  if (!m) {
+    m = s.radky.find(r => r.mesic < aktualni && r.chybi > 0)?.mesic;
+    if (!m) {
+      m = najemnik.platiDopredu ? dalsiMesic(aktualni) : aktualni;
+      if (m < najemnik.zacatek) m = najemnik.zacatek;
+      for (let i = 0; i < 24 && pokrytiMesice(m).pokryto >= pokrytiMesice(m).mel; i++) m = dalsiMesic(m);
+    }
+  }
+  const p = pokrytiMesice(m);
+  const chybi = p.mel - p.pokryto;
+  if (p.pokryto > 0 && chybi > 0) return { zaMesic: m, castka: chybi, doplatek: true, zaplaceno: p.pokryto, mel: p.mel };
+  return { zaMesic: m, castka: p.najem, doplatek: false, zaplaceno: p.pokryto, mel: p.mel };
 }
 
 export const jeUkonceny = (najemnik, dnes) => !!najemnik.konec && najemnik.konec < mesicZData(dnes);

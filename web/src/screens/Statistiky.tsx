@@ -4,14 +4,14 @@ import { Bar, BarChart, CartesianGrid, Cell, ComposedChart, Line, LineChart, Pie
 import type { TooltipProps } from 'recharts';
 import type { NameType, ValueType } from 'recharts/types/component/DefaultTooltipContent';
 import { Download, Share2, Upload } from 'lucide-react';
-import { AppShell, Card, Chip, Main, Nadpis, Prepinac, ZpusobIkona, useToast } from '../components/ui';
+import { AppShell, Card, Chip, Main, Nadpis, Prepinac, VolbaMesice, ZpusobIkona, useToast } from '../components/ui';
 import { useData } from '../data/store';
 import { mesicZData, statistiky } from '../lib/core';
 import { NazevMesice, datumCz, kc, kratkyMesic, posunMesic } from '../lib/format';
 import { lzeSdilet, prectiZalohu, sdilejZalohu, stahniZalohu } from '../lib/zaloha';
 import { ZALOHA_PO_DNECH, zalohaStara } from './Prehled';
 
-type Obdobi = 'rok' | '12' | 'vlastni';
+type Obdobi = 'mesic' | 'rok' | '12' | 'vlastni';
 const kcKratce = (n: number) => (n >= 1000 ? `${Math.round(n / 1000)} tis.` : String(n));
 
 function GrafKarta({ nadpis, children, legenda }: { nadpis: string; children: ReactNode; legenda?: ReactNode }) {
@@ -33,13 +33,14 @@ export default function Statistiky() {
   const { data, dnes } = useData();
   const mesic = mesicZData(dnes);
   const [obdobi, setObdobi] = useState<Obdobi>('12');
+  const [vybranyMesic, setVybranyMesic] = useState(mesic);
   const [od, setOd] = useState(posunMesic(mesic, -11));
   const [doM, setDoM] = useState(mesic);
   const [zpusob, setZpusob] = useState<'vse' | 'ucet' | 'hotove'>('vse');
   const [oznaceni, setOznaceni] = useState('');
   const [razeni, setRazeni] = useState<'prijato' | 'dluh' | 'jmeno'>('prijato');
 
-  const rozsah = obdobi === 'rok' ? [`${mesic.slice(0, 4)}-01`, mesic] : obdobi === '12' ? [posunMesic(mesic, -11), mesic] : [od, doM];
+  const rozsah = obdobi === 'mesic' ? [vybranyMesic, vybranyMesic] : obdobi === 'rok' ? [`${mesic.slice(0, 4)}-01`, mesic] : obdobi === '12' ? [posunMesic(mesic, -11), mesic] : [od, doM];
   // Začít až prvním měsícem, kdy něco běželo (prázdné měsíce na začátku jen zabírají místo).
   const prvni = data.najemnici.map(n => n.zacatek).sort()[0] ?? mesic;
   const zacatek = rozsah[0] < prvni ? prvni : rozsah[0];
@@ -50,11 +51,11 @@ export default function Statistiky() {
   const kolac = [{ k: 'Na účet', v: st.prijatoUcet, c: 'var(--bank)' }, { k: 'Hotově', v: st.prijatoHotove, c: 'var(--cash)' }].filter(x => x.v > 0);
 
   return (
-    <AppShell title="Statistiky" subtitle={body.length ? `${NazevMesice(body[0].mesic)} – ${NazevMesice(body.at(-1)!.mesic)}` : ''}>
+    <AppShell title="Statistiky" subtitle={body.length === 1 ? NazevMesice(body[0].mesic) : body.length ? `${NazevMesice(body[0].mesic)} – ${NazevMesice(body.at(-1)!.mesic)}` : ''}>
       <Main>
         <div className="sticky top-0 z-[5] -mx-4 space-y-2 bg-background/90 px-4 pt-1 pb-3 backdrop-blur">
           <div className="-mx-4 flex gap-2 overflow-x-auto px-4">
-            {([['12', '12 měsíců'], ['rok', 'Tento rok'], ['vlastni', 'Vlastní']] as const).map(([k, l]) => (
+            {([['mesic', 'Měsíc'], ['12', '12 měsíců'], ['rok', 'Tento rok'], ['vlastni', 'Vlastní']] as const).map(([k, l]) => (
               <button key={k} onClick={() => setObdobi(k)} className={`h-9 shrink-0 rounded-full px-4 text-sm font-semibold ${obdobi === k ? 'bg-foreground text-background' : 'card-soft text-muted-foreground'}`}>{l}</button>
             ))}
             {nemovitosti.length > 1 && (
@@ -64,6 +65,7 @@ export default function Statistiky() {
               </select>
             )}
           </div>
+          {obdobi === 'mesic' && <VolbaMesice hodnota={vybranyMesic} min={prvni} max={mesic} onChange={setVybranyMesic} kompaktni />}
           {obdobi === 'vlastni' && (
             <div className="grid grid-cols-2 gap-2">
               <input type="month" value={od} onChange={e => setOd(e.target.value)} className="h-10 rounded-xl border border-border bg-card px-3 text-sm" />

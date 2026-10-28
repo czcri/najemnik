@@ -138,6 +138,37 @@ function oznacRucniPrevody(vysledky, platby) {
   }
 }
 
+// Za který měsíc platba je, podle zprávy pro příjemce: „nájem 10/2026“, „10.2026“, „říjen“, „za října“…
+// Rok chybí → rok platby (u měsíce víc než půl roku před datem platby následující rok). Nic nenalezeno → null.
+const MESICE_ZE_ZPRAVY = [
+  ['cervenec', 7], ['cervence', 7], ['leden', 1], ['ledna', 1], ['unor', 2], ['unora', 2], ['brezen', 3], ['brezna', 3],
+  ['duben', 4], ['dubna', 4], ['kveten', 5], ['kvetna', 5], ['cerven', 6], ['cervna', 6], ['srpen', 8], ['srpna', 8],
+  ['zari', 9], ['rijen', 10], ['rijna', 10], ['listopad', 11], ['listopadu', 11], ['prosinec', 12], ['prosince', 12],
+];
+export function zaMesicZeZpravy(zprava, datum) {
+  const t = bezDiakritiky(zprava);
+  const rokPlatby = +datum.slice(0, 4);
+  let mesic = null, rok = null;
+  const cisla = t.match(/(?:^|[^\d])(\d{1,2})\s*[/.\-]\s*(20\d{2})(?!\d)/);
+  if (cisla && +cisla[1] >= 1 && +cisla[1] <= 12) { mesic = +cisla[1]; rok = +cisla[2]; }
+  if (!mesic) {
+    for (const slovo of t.split(/[^a-z0-9]+/)) {
+      const nalez = MESICE_ZE_ZPRAVY.find(([k]) => slovo === k);
+      if (nalez) { mesic = nalez[1]; break; }
+    }
+    const r = t.match(/(?:^|[^\d])(20\d{2})(?!\d)/);
+    if (mesic && r) rok = +r[1];
+  }
+  if (!mesic) return null;
+  if (!rok) {
+    rok = rokPlatby;
+    const mesicPlatby = +datum.slice(5, 7);
+    if (mesic - mesicPlatby < -6) rok++;      // v prosinci „leden“ = příští rok
+    else if (mesic - mesicPlatby > 6) rok--;  // v lednu „prosinec“ = loňský
+  }
+  return `${rok}-${String(mesic).padStart(2, '0')}`;
+}
+
 /**
  * Převede potvrzené rozhodnutí uživatele na změny dat.
  * rozhodnuti: pole { klic, akce: 'zapsat' | 'nahradit' | 'nenajem' | 'nenajemVzdy' | 'preskocit', najemnikId, zapamatovatUcet }
@@ -163,6 +194,8 @@ export function prevedImport(vypis, vysledky, rozhodnuti, najemnici, pravidla, n
         najemnikId: n.id,
         datum: pohyb.datum,
         castka: Math.round(pohyb.castkaHal / 100),
+        // Za měsíc ze zprávy; jinak se odvodí z data a pravidla nájemníka (platí dopředu / běžný měsíc).
+        ...(zaMesicZeZpravy(pohyb.zprava, pohyb.datum) ? { zaMesic: zaMesicZeZpravy(pohyb.zprava, pohyb.datum) } : {}),
         poznamka: pohyb.zprava.slice(0, 200),
         zdroj: {
           typ: 'vypis', klic: v.klic, banka: vypis.banka, ucet: vypis.ucet, castkaHal: pohyb.castkaHal,

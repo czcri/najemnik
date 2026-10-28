@@ -54,7 +54,11 @@ export function statistiky(data, od, doMesice, dnes, filtr = {}) {
       return posledni;
     };
     const zaplatilDo = den => platby.filter(p => p.datum <= den).reduce((s, p) => s + p.castka, 0);
-    return { n, stav, platby, melDo, zaplatilDo, melVMesici: new Map(stav.radky.map(r => [r.mesic, r.mel])) };
+    return {
+      n, stav, platby, melDo, zaplatilDo,
+      melVMesici: new Map(stav.radky.map(r => [r.mesic, r.mel])),
+      pokrytoVMesici: new Map(stav.radky.map(r => [r.mesic, r.mel - r.chybi])),
+    };
   });
 
   const poMesicich = mesice.map(mesic => {
@@ -62,6 +66,8 @@ export function statistiky(data, od, doMesice, dnes, filtr = {}) {
     const ucet = vMesici.filter(p => zpusobPlatby(p, vsichniPodleId.get(p.najemnikId)) === 'ucet').reduce((s, p) => s + p.castka, 0);
     const hotove = vMesici.filter(p => zpusobPlatby(p, vsichniPodleId.get(p.najemnikId)) === 'hotove').reduce((s, p) => s + p.castka, 0);
     const ocekavano = stavy.reduce((s, x) => s + (x.melVMesici.get(mesic) ?? 0), 0);
+    // Kolik z předpisu měsíce je zaplaceno platbami „za“ tento měsíc (pro úspěšnost výběru).
+    const pokryto = stavy.reduce((s, x) => s + (x.pokrytoVMesici.get(mesic) ?? 0), 0);
     const den = posledniDen(mesic);
     // Běžící měsíc ještě není splatný: dluh k dnešku = předpisy ukončených měsíců − dosavadní platby.
     const dluh = mesic === aktualni
@@ -79,7 +85,7 @@ export function statistiky(data, od, doMesice, dnes, filtr = {}) {
         else vubec++;
       }
     }
-    return { mesic, ucet, hotove, prijato: ucet + hotove, ocekavano, dluh, vcas, pozde, vubec };
+    return { mesic, ucet, hotove, prijato: ucet + hotove, ocekavano, pokryto, dluh, vcas, pozde, vubec };
   });
 
   const prijatoUcet = poMesicich.reduce((s, m) => s + m.ucet, 0);
@@ -90,7 +96,8 @@ export function statistiky(data, od, doMesice, dnes, filtr = {}) {
   return {
     mesice: poMesicich,
     prijato, prijatoUcet, prijatoHotove, ocekavano,
-    uspesnost: ocekavano ? prijato / ocekavano : null,
+    // Příjmy (graf) jsou podle data přijetí; úspěšnost podle měsíce, za který platby jsou.
+    uspesnost: ocekavano ? poMesicich.reduce((s, m) => s + m.pokryto, 0) / ocekavano : null,
     dluh: stavy.reduce((s, x) => s + x.stav.dluh, 0),
     podleNajemniku: stavy.map(x => ({
       najemnik: x.n,

@@ -1,7 +1,7 @@
 // Párování plateb z výpisu na nájemníky (spec. kap. 11) – vymyšlená data.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { sparuj, prevedImport, vychoziRozhodnuti, klicePohybu, prazdnaPravidla } from '../core/parovani.js';
+import { sparuj, prevedImport, vychoziRozhodnuti, klicePohybu, prazdnaPravidla, zaMesicZeZpravy } from '../core/parovani.js';
 
 const MUJ = '2200000001/2010';
 const pohyb = (o = {}) => ({
@@ -97,7 +97,7 @@ test('import → platby, zapamatování účtu, opakovaný import = duplicita', 
   assert.equal(z.platby.length, 1);
   assert.deepEqual(
     { ...z.platby[0], zdroj: undefined },
-    { id: 'p1', najemnikId: 'petr', datum: '2026-10-05', castka: 12001, poznamka: 'najem rijen', zdroj: undefined },
+    { id: 'p1', najemnikId: 'petr', datum: '2026-10-05', castka: 12001, zaMesic: '2026-10', poznamka: 'najem rijen', zdroj: undefined },
   );
   assert.equal(z.platby[0].zdroj.castkaHal, 1200050);
   assert.deepEqual(z.najemnici.map(n => [n.id, n.uctyPlatce]), [['petr', ['222/5500']]]);
@@ -135,4 +135,25 @@ test('ručně zapsaný převod: import nabídne nahrazení, hotovost ne', () => 
   assert.deepEqual(z.smazatPlatby, ['r1']);
   assert.equal(z.platby[0].zdroj.typ, 'vypis');
   assert.equal(z.platby[0].datum, '2026-10-07', 'datum z výpisu');
+});
+
+test('za měsíc ze zprávy pro příjemce', () => {
+  assert.equal(zaMesicZeZpravy('najem 10/2026', '2026-09-28'), '2026-10');
+  assert.equal(zaMesicZeZpravy('Nájem 11.2026 byt 2', '2026-11-03'), '2026-11');
+  assert.equal(zaMesicZeZpravy('nájemné za říjen', '2026-09-28'), '2026-10');
+  assert.equal(zaMesicZeZpravy('Najem rijna', '2026-10-05'), '2026-10');
+  assert.equal(zaMesicZeZpravy('nájem červenec', '2026-06-30'), '2026-07');
+  assert.equal(zaMesicZeZpravy('najem leden', '2026-12-28'), '2027-01');
+  assert.equal(zaMesicZeZpravy('prosinec doplatek', '2027-01-05'), '2026-12');
+  assert.equal(zaMesicZeZpravy('nájemné + voda + parkovné', '2026-10-07'), null);
+  assert.equal(zaMesicZeZpravy('VS 1001 13/2026', '2026-10-07'), null);
+  assert.equal(zaMesicZeZpravy('', '2026-10-07'), null);
+});
+
+test('import: měsíc ze zprávy se uloží k platbě', () => {
+  const v = vypis(pohyb({ protiucet: '111/0800', zprava: 'najem 11/2026', datum: '2026-10-29' }), pohyb({ protiucet: '111/0800', castkaHal: 50000, zprava: 'doplatek' }));
+  const vys = sparuj(v, NAJ, []);
+  const z = prevedImport(v, vys, vychoziRozhodnuti(vys), NAJ, prazdnaPravidla(), (() => { let i = 0; return () => `x${++i}`; })());
+  assert.equal(z.platby[0].zaMesic, '2026-11');
+  assert.equal('zaMesic' in z.platby[1], false);
 });

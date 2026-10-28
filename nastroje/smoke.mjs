@@ -154,8 +154,10 @@ try {
   t = await text();
   over(t.includes('Dluží ' + kc(20000)) && t.includes('chybí ' + kc(10000)), '1: dluh 20 000 + tento měsíc 10 000', t.slice(0, 300));
 
-  // 3) Platba hotově
+  // 3) Platba hotově – „Za měsíc“ předvybere nejstarší nezaplacený měsíc (srpen)
   await klik('Platba');
+  t = await text();
+  over(t.includes('Za měsíc') && t.includes('Srpen 2026'), 'platba: za měsíc předvybrán nejstarší nezaplacený (srpen)');
   await vypln({ 'Částka': '10000', 'Datum': '2026-10-05', 'Poznámka': 'za srpen' });
   await klik('Hotově');
   await klik('Uložit platbu');
@@ -197,7 +199,7 @@ try {
   await snimek('prehled');
   await klik('O aplikaci');
   t = await text();
-  over(t.includes('verze 2.3.2') && t.toLowerCase().includes('vytvořilo'), 'panel O aplikaci z loga v záhlaví');
+  over(t.includes('verze 2.4') && t.toLowerCase().includes('vytvořilo'), 'panel O aplikaci z loga v záhlaví');
   await snimek('o-aplikaci', false);
   await klik('Zavřít');
   await jdi('#/dluznici');
@@ -224,6 +226,11 @@ try {
   await pockej(800);
   t = await text();
   over(t.includes('Příjmy po měsících') && t.includes('Hotově vs. na účet') && t.includes('Data a záloha'), 'statistiky s grafy a zálohou');
+  await klik('Měsíc');
+  t = await text();
+  over(t.includes('Říjen 2026') && !t.includes('Srpen 2026 –'), 'statistiky: volba Měsíc');
+  await klik('Předchozí měsíc');
+  over((await text()).includes('Září 2026'), 'statistiky: listování na předchozí měsíc');
   await snimek('statistiky');
   await jdi('#/nastaveni');
   t = await text();

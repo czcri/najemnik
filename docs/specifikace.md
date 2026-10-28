@@ -267,3 +267,14 @@ Změny proti pilotu:
 - Dluh z minulých měsíců se do předvyplněné částky nezapočítává (dříve ano).
 - Pod částkou nápověda „Předvyplněn pravidelný měsíční nájem“ / „Předvyplněn doplatek za … – zaplaceno už X z Y“.
 - Platí pro platbu v detailu nájemníka i „Vložit platbu“; logika `navrhPlatby` v `core/logika.js` (testováno).
+
+## 17. Platba „za měsíc“ (2026-10-28, verze 2.4)
+
+- **Platba má pole „Za měsíc“** (`zaMesic`, 'RRRR-MM'), nezávislé na datu přijetí. Ve formuláři výběr ‹ Říjen 2026 › (šipky, klepnutí = měsíc a rok).
+- **Nájemník – „Obvykle platí“:** za běžný měsíc / **dopředu** (`platiDopredu`; v září za říjen).
+- **Předvýběr:** nejstarší nezaplacený ukončený měsíc (dluh); jinak běžný měsíc, u „dopředu“ příští; je-li celý zaplacený, další nezaplacený. Částka = nájem toho měsíce, nebo doplatek (kap. 16). Změna měsíce ve formuláři přepočítá částku.
+- **Platby bez „za měsíc“** (starší verze, import bez měsíce ve zprávě) → odvodí se z data a pravidla nájemníka; po nastavení „dopředu“ se jeho dosavadní takové platby posunou o měsíc.
+- **Výpočet** (`stavNajemnika`): každý měsíc nejdřív platbami za něj; přebytky doplní nejstarší nezaplacené měsíce, zbytek = přeplatek; platby za budoucí měsíce = předplaceno. Celkové součty se nemění, mění se přiřazení k měsícům.
+- **Zobrazení:** tabulka Měsíce, Platby (platby za vybraný měsíc), strana Hotovost (u „dopředu“ se v měsíci čeká platba za příští měsíc), detail („za říjen“ u platby), malý graf – vše podle „za měsíc“.
+- **Statistiky:** graf příjmů podle data přijetí (peníze, účetnictví); úspěšnost výběru podle „za měsíc“. Nová volba období **Měsíc** s listováním ‹ ›.
+- **Import:** měsíc se rozpozná ze zprávy pro příjemce („nájem 10/2026“, „10.2026“, „říjen“, „za října“…); jinak podle pravidla nájemníka.

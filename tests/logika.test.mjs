@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  stavNajemnika, souhrn, zmenNajem, aktualniNajem, potrebaZalohy, parseCastka, navrhPlatby,
+  stavNajemnika, souhrn, zmenNajem, aktualniNajem, potrebaZalohy, parseCastka, navrhPlatby, obdobiPlatby,
   vytvorZalohu, nactiZalohu, rozsahMesicu,
 } from '../core/logika.js';
 
@@ -28,22 +28,53 @@ test('1: nový nájemník bez plateb', () => {
   assert.deepEqual(stavy(s), ['2026-08:dluh', '2026-09:dluh', '2026-10:bezi']);
 });
 
-test('2: platba 10 000', () => {
-  const s = stavNajemnika(test1(), [platba('p1', '2026-10-05', 10000)], DNES);
+test('2: platba 10 000 za nejstarší měsíc (srpen)', () => {
+  const s = stavNajemnika(test1(), [{ ...platba('p1', '2026-10-05', 10000), zaMesic: '2026-08' }], DNES);
   assert.equal(s.dluh, 10000);
   assert.equal(s.tentoMesic, 10000);
   assert.deepEqual(stavy(s), ['2026-08:ok', '2026-09:dluh', '2026-10:bezi']);
 });
 
-test('3: pozdní doplatek srovná starší měsíce', () => {
-  const s = stavNajemnika(test1(), [platba('p1', '2026-10-05', 10000), platba('p2', '2026-10-10', 15000)], DNES);
+test('2b: platba bez „za měsíc“ (z dřívějších verzí) se počítá do měsíce podle data', () => {
+  const s = stavNajemnika(test1(), [platba('p1', '2026-10-05', 10000)], DNES);
+  assert.deepEqual(stavy(s), ['2026-08:dluh', '2026-09:dluh', '2026-10:ok']);
+  assert.equal(s.dluh, 20000);
+  assert.equal(s.tentoMesic, 0);
+});
+
+test('3: pozdní doplatek za starší měsíce; přebytek doplní nejstarší nezaplacené', () => {
+  const s = stavNajemnika(test1(), [
+    { ...platba('p1', '2026-10-05', 10000), zaMesic: '2026-08' },
+    { ...platba('p2', '2026-10-10', 15000), zaMesic: '2026-09' },   // 5 000 navíc → říjen
+  ], DNES);
   assert.equal(s.dluh, 0);
   assert.equal(s.tentoMesic, 5000);
   assert.equal(s.stav, 'bezi');
   assert.deepEqual(stavy(s), ['2026-08:ok', '2026-09:ok', '2026-10:bezi']);
   assert.equal(s.radky[2].chybi, 5000);
-  // průběžný rozdíl podle data plateb
-  assert.deepEqual(s.radky.map(r => r.prubeznyRozdil), [10000, 20000, 5000]);
+  // sloupec Zaplatil = platby za daný měsíc; průběžný rozdíl podle nich
+  assert.deepEqual(s.radky.map(r => r.zaplatil), [10000, 15000, 0]);
+  assert.deepEqual(s.radky.map(r => r.prubeznyRozdil), [0, -5000, 5000]);
+});
+
+test('přebytek běžného měsíce doplní nejdřív nejstarší dluh', () => {
+  const s = stavNajemnika(test1(), [{ ...platba('p1', '2026-10-05', 25000), zaMesic: '2026-10' }], DNES);
+  assert.deepEqual(stavy(s), ['2026-08:ok', '2026-09:dluh', '2026-10:ok']);
+  assert.equal(s.dluh, 5000);
+});
+
+test('platba dopředu: v září za říjen; pravidlo nájemníka posune i platby bez „za měsíc“', () => {
+  const n = test1();
+  const zari = '2026-09-25';
+  const s = stavNajemnika(n, [platba('p1', '2026-08-03', 10000), { ...platba('p2', '2026-09-20', 10000), zaMesic: '2026-10' }], zari);
+  assert.equal(s.dluh, 0);
+  assert.equal(s.tentoMesic, 10000, 'září nezaplaceno');
+  assert.equal(s.preplatek, 10000, 'říjen předplacen');
+  assert.deepEqual(s.budouci, { '2026-10': 10000 });
+  const dopredu = { ...n, platiDopredu: true };
+  // srpnová platba bez „za měsíc“ → za září, zářijová → za říjen
+  const d = stavNajemnika(dopredu, [platba('p1', '2026-08-03', 10000), platba('p2', '2026-09-20', 10000)], '2026-10-15');
+  assert.deepEqual(d.radky.map(r => r.zaplatil), [0, 10000, 10000]);
 });
 
 test('4: přeplatek', () => {
@@ -145,17 +176,29 @@ test('7: záloha tam a zpět, poškozená záloha se odmítne', () => {
   assert.throws(() => nactiZalohu(JSON.stringify(spatna)), /poškozenou platbu/);
 });
 
-test('návrh částky platby: nájem, nebo doplatek v měsíci', () => {
+test('návrh platby: za který měsíc a kolik', () => {
   const n = test1();
-  // nic nezaplaceno, i s dluhem z minulých měsíců → pravidelný nájem (ne dluh)
-  assert.deepEqual([navrhPlatby(n, [], DNES).castka, navrhPlatby(n, [], DNES).doplatek], [10000, false]);
-  // v říjnu už přišlo 4 000 → doplatek 6 000
-  const cast = navrhPlatby(n, [platba('p1', '2026-10-03', 4000)], DNES);
-  assert.deepEqual([cast.castka, cast.doplatek, cast.zaplaceno], [6000, true, 4000]);
-  // výdaj v měsíci se do doplatku počítá
-  assert.equal(navrhPlatby(n, [platba('p1', '2026-10-03', 4000)], DNES, [{ datum: '2026-10-02', castka: 500 }]).castka, 6500);
-  // říjen zaplacen celý → zase pravidelný nájem (např. platba dopředu)
-  assert.deepEqual([navrhPlatby(n, [platba('p1', '2026-10-03', 10000)], DNES).castka, navrhPlatby(n, [platba('p1', '2026-10-03', 10000)], DNES).doplatek], [10000, false]);
-  // platba ze září se do říjnového doplatku nepočítá
-  assert.equal(navrhPlatby(n, [platba('p1', '2026-09-20', 4000)], DNES).castka, 10000);
+  // dluh za srpen → navrhne srpen, celý nájem
+  assert.deepEqual(pick(navrhPlatby(n, [], DNES)), ['2026-08', 10000, false]);
+  // srpen napůl → doplatek srpna
+  assert.deepEqual(pick(navrhPlatby(n, [{ ...platba('p', '2026-09-01', 4000), zaMesic: '2026-08' }], DNES)), ['2026-08', 6000, true]);
+  // bez dluhu: běžný měsíc; po částečné platbě doplatek (vč. výdaje v měsíci)
+  const novy = { ...n, zacatek: '2026-10', predpisy: [{ od: '2026-10', slozky: [{ nazev: 'Nájem', castka: 10000 }] }] };
+  assert.deepEqual(pick(navrhPlatby(novy, [], DNES)), ['2026-10', 10000, false]);
+  assert.deepEqual(pick(navrhPlatby(novy, [platba('p', '2026-10-03', 4000)], DNES)), ['2026-10', 6000, true]);
+  assert.equal(navrhPlatby(novy, [platba('p', '2026-10-03', 4000)], DNES, [{ datum: '2026-10-02', castka: 500 }]).castka, 6500);
+  // říjen zaplacen → listopad (platba dopředu)
+  assert.deepEqual(pick(navrhPlatby(novy, [platba('p', '2026-10-03', 10000)], DNES)), ['2026-11', 10000, false]);
+  // nájemník „platí dopředu“ → příští měsíc
+  assert.deepEqual(pick(navrhPlatby({ ...novy, platiDopredu: true }, [], DNES)), ['2026-11', 10000, false]);
+  // uživatel vybral jiný měsíc
+  assert.deepEqual(pick(navrhPlatby(novy, [platba('p', '2026-10-03', 4000)], DNES, [], '2026-12')), ['2026-12', 10000, false]);
+});
+const pick = x => [x.zaMesic, x.castka, x.doplatek];
+
+
+test('za který měsíc platba je', () => {
+  assert.equal(obdobiPlatby({ datum: '2026-09-25', zaMesic: '2026-10' }, {}), '2026-10');
+  assert.equal(obdobiPlatby({ datum: '2026-09-25' }, {}), '2026-09');
+  assert.equal(obdobiPlatby({ datum: '2026-12-25' }, { platiDopredu: true }), '2027-01');
 });

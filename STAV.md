@@ -68,3 +68,9 @@ Odloženo: widget na plochu + skutečné notifikace (nativní obal Capacitor/APK
 ## 2026-10-28 – verze 2.3.2
 
 - Předvyplněná částka platby: pravidelný nájem, nebo doplatek měsíce (spec. kap. 16).
+
+## 2026-10-28 – verze 2.4
+
+- Platba „za měsíc“ + nájemník „platí dopředu“; výpočty, Platby, Hotovost, detail a import podle měsíce, za který platba je (spec. kap. 17).
+- Statistiky: období Měsíc s listováním.
+- Testy: 57 core + kouřový test.

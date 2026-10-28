@@ -6,8 +6,8 @@ import { AppShell, Card, Main, STAV_TEXT, ZpusobIkona } from '../components/ui';
 import { FormNajem, FormNajemnik, FormPlatba, FormVydaj } from '../components/formulare';
 import { PanelUpominky } from '../components/upominka';
 import { useData } from '../data/store';
-import { aktualniNajem, mesicZData, zpusobPlatby } from '../lib/core';
-import { NazevMesice, datumCz, kc, kratkyMesic, odMesice } from '../lib/format';
+import { aktualniNajem, mesicZData, obdobiPlatby, zpusobPlatby } from '../lib/core';
+import { NazevMesice, datumCz, kc, kratkyMesic, nazevMesice, odMesice } from '../lib/format';
 import type { Najemnik, Platba, Vydaj } from '../types';
 import { usePamet } from '../lib/pamet';
 
@@ -28,7 +28,7 @@ function MalyGraf({ najemnik, platby }: { najemnik: Najemnik; platby: Platba[] }
   const radky = stav(najemnik.id).radky.slice(-12);
   if (radky.length === 0) return null;
   const body = radky.map(r => {
-    const vMesici = platby.filter(p => mesicZData(p.datum) === r.mesic);
+    const vMesici = platby.filter(p => obdobiPlatby(p, najemnik) === r.mesic);
     const ucet = vMesici.filter(p => zpusobPlatby(p, najemnik) === 'ucet').reduce((s, p) => s + p.castka, 0);
     return { mesic: r.mesic, popisek: kratkyMesic(r.mesic), ucet, hotove: r.zaplatil - ucet, mel: r.mel, dluh: r.stav === 'dluh' };
   });
@@ -141,7 +141,7 @@ export default function Detail() {
             {platby.map(p => (
               <button key={p.id} onClick={() => setOkno({ typ: 'platba', platba: p })} className="flex min-h-14 w-full items-center gap-3 px-4 py-3 text-left active:bg-muted">
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold">{datumCz(p.datum)} <ZdrojStitek p={p} /></p>
+                  <p className="text-sm font-semibold">{datumCz(p.datum)} <ZdrojStitek p={p} /> <span className="text-xs font-medium text-muted-foreground">za {nazevMesice(obdobiPlatby(p, n))}</span></p>
                   {p.poznamka && <p className="truncate text-xs text-muted-foreground">{p.poznamka}</p>}
                 </div>
                 <p className="font-bold text-status-ok tabular">+{kc(p.castka)}</p>
@@ -169,7 +169,7 @@ export default function Detail() {
               ))}
               {s.radky.length === 0 && <p className="p-6 text-center text-sm text-muted-foreground">Nájem začne od {odMesice(n.zacatek)}.</p>}
             </Card>
-            <p className="mt-2 px-2 text-xs text-muted-foreground">Zaplatil = platby s datem v daném měsíci. Dluh kum. = kolik k tomu měsíci celkem chybělo (záporný = přeplatek). Stav vlevo počítá i pozdější doplatky.</p>
+            <p className="mt-2 px-2 text-xs text-muted-foreground">Zaplatil = platby za daný měsíc. Co v měsíci přebývá, doplní nejstarší nezaplacené měsíce. Dluh kum. = kolik k tomu měsíci celkem chybělo (záporný = přeplatek).</p>
           </>
         )}
 

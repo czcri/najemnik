@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { Check, ChevronRight, FileUp } from 'lucide-react';
 import { useData } from '../data/store';
 import { parseCastka, seznamMesice, type PolozkaMesice } from '../lib/core';
-import { NazevMesice, datumCz, datumKratce, kc, noveId, pocet } from '../lib/format';
+import { NazevMesice, datumCz, datumKratce, kc, nazevMesice, noveId, pocet } from '../lib/format';
 import { Chyba, Panel, Pole, Tlacitko, VSTUP, useToast } from './ui';
 import { mesicZData } from '../lib/core';
 import { usePamet } from '../lib/pamet';
@@ -63,7 +63,7 @@ function StranaSeznamu({ zpusob }: { zpusob: 'hotove' | 'ucet' }) {
   const posledniImport = data.nastaveni.importy[0]?.datum;
 
   async function prevzit(p: PolozkaMesice, castka = p.chybi, datum = dnes) {
-    const platba = { id: noveId(), najemnikId: p.najemnik.id, datum, castka, poznamka: '', zdroj: { typ: 'hotove' as const } };
+    const platba = { id: noveId(), najemnikId: p.najemnik.id, datum, castka, zaMesic: p.zaMesic, poznamka: '', zdroj: { typ: 'hotove' as const } };
     await akce.ulozPlatbu(platba);
     toast(`Převzato ${kc(castka)} · ${p.najemnik.jmeno.split(' ')[0]}`, { popis: 'Zpět', onClick: () => akce.smazPlatbu(platba.id) });
   }
@@ -99,6 +99,7 @@ function StranaSeznamu({ zpusob }: { zpusob: 'hotove' | 'ucet' }) {
                 <p className="truncate text-[15px] font-bold">{p.najemnik.jmeno}</p>
                 <p className={`truncate text-xs ${p.poTerminu ? 'font-semibold text-[oklch(0.8_0.14_65)]' : p.dnes ? 'font-semibold text-[oklch(0.8_0.12_162)]' : 'opacity-60'}`}>
                   {p.ocekavano ? (p.dnes ? 'čekám dnes' : `${p.poTerminu ? 'po termínu · ' : ''}čekám k ${datumKratce(p.ocekavano)}`) : p.najemnik.oznaceni}
+                  {p.zaMesic !== mesic && ` · za ${nazevMesice(p.zaMesic).split(' ')[0]}`}
                 </p>
               </Link>
               <button onClick={() => hotove && setUpravit(p)} disabled={!hotove} className="shrink-0 text-right">
@@ -131,7 +132,7 @@ function PanelPrevzeti({ p, onClose, onPotvrdit }: { p: PolozkaMesice; onClose: 
       <div className="space-y-4 text-foreground">
         <div className="rounded-2xl bg-status-ok-soft p-4">
           <p className="text-lg font-extrabold">{p.najemnik.jmeno}</p>
-          <p className="text-sm text-muted-foreground">{p.najemnik.oznaceni} · za tento měsíc chybí {kc(p.chybi)}{p.stav === 'castecne' ? ` z ${kc(p.mel)}` : ''}</p>
+          <p className="text-sm text-muted-foreground">{p.najemnik.oznaceni} · za {nazevMesice(p.zaMesic)} chybí {kc(p.chybi)}{p.stav === 'castecne' ? ` z ${kc(p.mel)}` : ''}</p>
         </div>
         <p className="text-sm text-muted-foreground">Zkontrolujte částku a datum. Při nižší částce zůstane nájemník v seznamu jako „částečně“.</p>
         <Pole label="Převzatá částka">

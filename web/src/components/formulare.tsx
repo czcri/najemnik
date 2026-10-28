@@ -2,9 +2,9 @@
 import { useState, type FormEvent } from 'react';
 import { Banknote, Landmark, Plus, Trash2 } from 'lucide-react';
 import { useData } from '../data/store';
-import { aktualniNajem, castkaPredpisu, mesicZData, navrhPlatby, normalizujUcet, parseCastka, zmenNajem } from '../lib/core';
-import { datumCz, kc, nazevMesice, noveId, odMesice } from '../lib/format';
-import { Chyba, NapovedaCastky, Panel, Pole, Prepinac, Tlacitko, VSTUP, useToast } from './ui';
+import { aktualniNajem, castkaPredpisu, mesicZData, navrhPlatby, normalizujUcet, obdobiPlatby, parseCastka, zmenNajem } from '../lib/core';
+import { datumCz, kc, nazevMesice, noveId, odMesice, posunMesic } from '../lib/format';
+import { Chyba, NapovedaCastky, Panel, Pole, Prepinac, Tlacitko, VSTUP, VolbaMesice, useToast } from './ui';
 import type { Najemnik, Platba, Vydaj, Zpusob } from '../types';
 import { usePamet } from '../lib/pamet';
 
@@ -21,10 +21,14 @@ export function vysledekPoPlatbe(s: { dluh: number; tentoMesic: number; preplate
 export function FormPlatba({ najemnik, platba, onClose }: { najemnik: Najemnik; platba?: Platba; onClose: () => void }) {
   const { akce, dnes, data } = useData();
   const toast = useToast();
-  // Nová platba: pravidelný nájem, nebo doplatek, když už v tomto měsíci část přišla.
-  const navrh = navrhPlatby(najemnik, data.platby.filter(p => p.najemnikId === najemnik.id), dnes, data.vydaje.filter(v => v.najemnikId === najemnik.id));
-  const predvyplneno = navrh.castka;
+  // Nová platba: za nejstarší nezaplacený / běžný (u „dopředu“ příští) měsíc; pravidelný nájem, nebo doplatek.
+  const platbyNajemnika = data.platby.filter(p => p.najemnikId === najemnik.id && p.id !== platba?.id);
+  const vydajeNajemnika = data.vydaje.filter(v => v.najemnikId === najemnik.id);
+  const navrhZa = (m?: string) => navrhPlatby(najemnik, platbyNajemnika, dnes, vydajeNajemnika, m);
   const k = `platba:${najemnik.id}:${platba?.id ?? 'nova'}`;
+  const [zaMesic, setZaMesic] = usePamet(`${k}:zaMesic`, platba ? obdobiPlatby(platba, najemnik) : navrhZa().zaMesic);
+  const navrh = navrhZa(zaMesic);
+  const predvyplneno = navrh.castka;
   const [datum, setDatum] = usePamet(`${k}:datum`, platba?.datum ?? dnes);
   const [castka, setCastka] = usePamet(`${k}:castka`, String(platba?.castka ?? predvyplneno));
   const [zpusob, setZpusob] = usePamet<'prevod' | 'hotove'>(`${k}:zpusob`, 
@@ -39,7 +43,7 @@ export function FormPlatba({ najemnik, platba, onClose }: { najemnik: Najemnik; 
     if (!/^\d{4}-\d{2}-\d{2}$/.test(datum)) return setChyba('Vyplňte datum.');
     if (!c) return setChyba('Částka musí být kladné celé číslo v korunách.');
     await akce.ulozPlatbu({
-      ...platba, id: platba?.id ?? noveId(), najemnikId: najemnik.id, datum, castka: c, poznamka: poznamka.trim(),
+      ...platba, id: platba?.id ?? noveId(), najemnikId: najemnik.id, datum, castka: c, zaMesic, poznamka: poznamka.trim(),
       zdroj: zVypisu ?? { typ: zpusob },
     });
     toast(platba ? 'Platba upravena' : 'Platba uložena');
@@ -61,8 +65,13 @@ export function FormPlatba({ najemnik, platba, onClose }: { najemnik: Najemnik; 
               className="min-w-0 flex-1 bg-transparent text-[28px] font-extrabold tabular outline-none" />
             <span className="text-lg font-bold text-muted-foreground">Kč</span>
           </div>
-          {!platba && <NapovedaCastky navrh={navrh} mesic={nazevMesice(mesicZData(dnes)).split(' ')[0]} />}
+          {!platba && <NapovedaCastky navrh={navrh} mesic={nazevMesice(zaMesic)} />}
         </Pole>
+        <div>
+          <span className="mb-1.5 block px-1 text-sm font-bold text-muted-foreground">Za měsíc</span>
+          <VolbaMesice hodnota={zaMesic} min={najemnik.zacatek} max={posunMesic(mesicZData(dnes), 12)} kompaktni
+            onChange={m => { setZaMesic(m); if (!platba) setCastka(String(navrhZa(m).castka)); }} />
+        </div>
         <Pole label="Datum"><input type="date" value={datum} onChange={e => setDatum(e.target.value)} className={VSTUP} /></Pole>
         {zVypisu
           ? <p className="rounded-2xl bg-status-over-soft p-3 text-sm text-status-over">
@@ -164,7 +173,7 @@ export function FormNajemnik({ najemnik, onClose, onUlozeno }: { najemnik?: Naje
   const [f, setF] = usePamet(`${k}:pole`, {
     jmeno: najemnik?.jmeno ?? '', osloveni: najemnik?.osloveni ?? '', oznaceni: najemnik?.oznaceni ?? '',
     zacatek: najemnik?.zacatek ?? mesicZData(dnes), castka: '', telefon: najemnik?.telefon ?? '', email: najemnik?.email ?? '',
-    vs: najemnik?.vs ?? '', poznamka: najemnik?.poznamka ?? '', konec: najemnik?.konec ?? '',
+    vs: najemnik?.vs ?? '', poznamka: najemnik?.poznamka ?? '', konec: najemnik?.konec ?? '', platiDopredu: najemnik?.platiDopredu ? 'ano' : 'ne',
     ucetProPlatby: najemnik?.ucetProPlatby ?? '', denHotovosti: najemnik?.denHotovosti ? String(najemnik.denHotovosti) : '',
   });
   const [zpusob, setZpusob] = usePamet<Zpusob>(`${k}:zpusob`, najemnik?.zpusobPlaceni ?? 'ucet');
@@ -204,6 +213,7 @@ export function FormNajemnik({ najemnik, onClose, onUlozeno }: { najemnik?: Naje
       konec: f.konec || null, predpisy, osloveni: f.osloveni.trim(), telefon: f.telefon.trim(), email: f.email.trim(),
       vs: f.vs.trim(), poznamka: f.poznamka.trim(), zpusobPlaceni: zpusob, uctyPlatce: ucty, ucetProPlatby: f.ucetProPlatby,
       denHotovosti: zpusob === 'hotove' ? den : undefined,
+      platiDopredu: f.platiDopredu === 'ano',
     };
     await akce.ulozNajemnika(novy);
     toast('Uloženo');
@@ -226,6 +236,10 @@ export function FormNajemnik({ najemnik, onClose, onUlozeno }: { najemnik?: Naje
         <Pole label="Jméno"><input value={f.jmeno} onChange={zmen('jmeno')} autoFocus={!najemnik} className={VSTUP} /></Pole>
         <Pole label="Způsob placení"><Prepinac hodnota={zpusob} onChange={setZpusob}
           volby={[{ k: 'ucet', l: 'Na účet', i: Landmark }, { k: 'hotove', l: 'Hotově', i: Banknote }]} /></Pole>
+        <Pole label="Obvykle platí" napoveda="Podle toho se u nové platby předvybere „Za měsíc“.">
+          <Prepinac hodnota={f.platiDopredu} onChange={v => setF({ ...f, platiDopredu: v })}
+            volby={[{ k: 'ne', l: 'Za běžný měsíc' }, { k: 'ano', l: 'Dopředu' }]} />
+        </Pole>
         {zpusob === 'hotove' && (
           <Pole label="Hotovost čekám k (den v měsíci)" napoveda="Např. 5 = každého 5. Podle toho se řadí seznam Hotovost na přehledu.">
             <input inputMode="numeric" value={f.denHotovosti} onChange={zmen('denHotovosti')} placeholder="1–31" className={VSTUP} />

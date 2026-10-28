@@ -1,11 +1,11 @@
 import { useMemo, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { Banknote, CheckCircle2, Landmark, Search } from 'lucide-react';
-import { AppShell, Chyba, Main, NapovedaCastky, Pole, Prepinac, Tlacitko, VSTUP, ZpusobIkona, useToast } from '../components/ui';
+import { AppShell, Chyba, Main, NapovedaCastky, Pole, Prepinac, Tlacitko, VSTUP, VolbaMesice, ZpusobIkona, useToast } from '../components/ui';
 import { vysledekPoPlatbe } from '../components/formulare';
 import { useData } from '../data/store';
 import { aktualniNajem, mesicZData, navrhPlatby, parseCastka, stavNajemnika } from '../lib/core';
-import { kc, nazevMesice, noveId } from '../lib/format';
+import { kc, nazevMesice, noveId, posunMesic } from '../lib/format';
 import { usePamet } from '../lib/pamet';
 
 const bezDiakritiky = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
@@ -17,10 +17,11 @@ export default function VlozitPlatbu() {
   const [id, setId] = usePamet('vlozit:id', aktivni.find(r => r.dluh + r.tentoMesic > 0)?.najemnik.id ?? aktivni[0]?.najemnik.id ?? '');
   const [hledat, setHledat] = useState('');
   const r = prehled.find(x => x.najemnik.id === id);
-  // Pravidelný nájem, nebo doplatek, když už v tomto měsíci část přišla.
-  const navrhPro = (x = r) => x ? navrhPlatby(x.najemnik, data.platby.filter(p => p.najemnikId === x.najemnik.id), dnes, data.vydaje.filter(v => v.najemnikId === x.najemnik.id)) : null;
-  const navrh = (x = r) => String(navrhPro(x)?.castka ?? '');
-  const [castka, setCastka] = usePamet('vlozit:castka', navrh());
+  // Za nejstarší nezaplacený / běžný (u „dopředu“ příští) měsíc; pravidelný nájem, nebo doplatek.
+  const navrhPro = (x = r, m?: string) => x ? navrhPlatby(x.najemnik, data.platby.filter(p => p.najemnikId === x.najemnik.id), dnes, data.vydaje.filter(v => v.najemnikId === x.najemnik.id), m) : null;
+  const [zaMesic, setZaMesic] = usePamet('vlozit:zaMesic', navrhPro()?.zaMesic ?? mesicZData(dnes));
+  const navrh = (x = r, m?: string) => String(navrhPro(x, m)?.castka ?? '');
+  const [castka, setCastka] = usePamet('vlozit:castka', navrh(r, zaMesic));
   const [zpusob, setZpusob] = usePamet<'prevod' | 'hotove'>('vlozit:zpusob', r?.najemnik.zpusobPlaceni === 'hotove' ? 'hotove' : 'prevod');
   const [datum, setDatum] = usePamet('vlozit:datum', dnes);
   const [poznamka, setPoznamka] = usePamet('vlozit:poznamka', '');
@@ -32,7 +33,9 @@ export default function VlozitPlatbu() {
   function vyber(novyId: string) {
     const x = prehled.find(y => y.najemnik.id === novyId);
     setId(novyId);
-    setCastka(navrh(x));
+    const n = navrhPro(x);
+    setZaMesic(n?.zaMesic ?? mesicZData(dnes));
+    setCastka(String(n?.castka ?? ''));
     setZpusob(x?.najemnik.zpusobPlaceni === 'hotove' ? 'hotove' : 'prevod');
     setHledat('');
   }
@@ -42,7 +45,7 @@ export default function VlozitPlatbu() {
     if (!r) return setChyba('Vyberte nájemníka.');
     const c = parseCastka(castka);
     if (!c) return setChyba('Částka musí být kladné celé číslo v korunách.');
-    const platba = { id: noveId(), najemnikId: r.najemnik.id, datum, castka: c, poznamka: poznamka.trim(), zdroj: { typ: zpusob } as const };
+    const platba = { id: noveId(), najemnikId: r.najemnik.id, datum, castka: c, zaMesic, poznamka: poznamka.trim(), zdroj: { typ: zpusob } as const };
     await akce.ulozPlatbu(platba);
     // Výsledek spočítat hned z nových dat (stav v kontextu se obnoví až po překreslení).
     const s = stavNajemnika(r.najemnik, [...data.platby.filter(p => p.najemnikId === r.najemnik.id), platba], dnes, data.vydaje.filter(v => v.najemnikId === r.najemnik.id));
@@ -105,8 +108,15 @@ export default function VlozitPlatbu() {
               <input inputMode="numeric" value={castka} onChange={e => setCastka(e.target.value)} className="min-w-0 flex-1 bg-transparent text-[34px] font-extrabold tabular outline-none" />
               <span className="text-xl font-bold text-muted-foreground">Kč</span>
             </div>
-            {r && <NapovedaCastky navrh={navrhPro()!} mesic={nazevMesice(mesicZData(dnes)).split(' ')[0]} />}
+            {r && <NapovedaCastky navrh={navrhPro(r, zaMesic)!} mesic={nazevMesice(zaMesic)} />}
           </Pole>
+          {r && (
+            <div>
+              <span className="mb-1.5 block px-1 text-sm font-bold text-muted-foreground">Za měsíc</span>
+              <VolbaMesice hodnota={zaMesic} min={r.najemnik.zacatek} max={posunMesic(mesicZData(dnes), 12)}
+                onChange={m => { setZaMesic(m); setCastka(navrh(r, m)); }} />
+            </div>
+          )}
           <Pole label="Způsob platby">
             <Prepinac hodnota={zpusob} onChange={setZpusob} volby={[{ k: 'prevod', l: 'Převodem', i: Landmark }, { k: 'hotove', l: 'Hotově', i: Banknote }]} />
           </Pole>

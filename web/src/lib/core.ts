@@ -16,8 +16,9 @@ export const stavNajemnika = logika.stavNajemnika as unknown as (n: Najemnik, p:
 type Souhrn = { radky: (import('../data/store').StavNajemnika & { najemnik: Najemnik })[]; dluhCelkem: number; dluzniku: number; tentoMesicCelkem: number };
 export const souhrn = logika.souhrn as unknown as (n: Najemnik[], p: Platba[], dnes: string, v?: Vydaj[]) => Souhrn;
 export const jeUkonceny = logika.jeUkonceny as unknown as (n: Najemnik, dnes: string) => boolean;
-export type NavrhPlatby = { castka: number; doplatek: boolean; zaplaceno: number; mel: number };
-export const navrhPlatby = logika.navrhPlatby as unknown as (n: Najemnik, p: Platba[], dnes: string, v?: Vydaj[]) => NavrhPlatby;
+export type NavrhPlatby = { zaMesic: string; castka: number; doplatek: boolean; zaplaceno: number; mel: number };
+export const navrhPlatby = logika.navrhPlatby as unknown as (n: Najemnik, p: Platba[], dnes: string, v?: Vydaj[], zaMesic?: string | null) => NavrhPlatby;
+export const obdobiPlatby = logika.obdobiPlatby as unknown as (p: Platba, n?: Najemnik) => string;
 export const mesicZData = logika.mesicZData as (d: string) => string;
 export const vytvorZalohu = logika.vytvorZalohu as unknown as (d: Data, cas: string) => object;
 export const nactiZalohu = logika.nactiZalohu as unknown as (text: string) => Omit<Data, 'nastaveni'> & { nastaveni: Partial<Data['nastaveni']> };
@@ -53,7 +54,7 @@ export const statistiky = stat.statistiky as unknown as (
   filtr?: { zpusob?: 'vse' | Zpusob; oznaceni?: string | null },
 ) => Statistiky;
 export type PolozkaMesice = {
-  najemnik: Najemnik; mel: number; zaplaceno: number; chybi: number; stav: 'nezaplaceno' | 'castecne' | 'zaplaceno';
+  najemnik: Najemnik; zaMesic: string; mel: number; zaplaceno: number; chybi: number; stav: 'nezaplaceno' | 'castecne' | 'zaplaceno';
   ocekavano: string | null; dnes: boolean; poTerminu: boolean;
 };
 export const seznamMesice = hotovost.seznamMesice as unknown as (n: Najemnik[], p: Platba[], v: Vydaj[], dnes: string, zpusob: Zpusob) =>

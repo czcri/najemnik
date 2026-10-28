@@ -62,7 +62,7 @@ const DATA = {
   ],
   platby: [
     platba('ucetni', '2026-10-05', 10000, 'vypis'),
-    platba('ucetni', '2026-12-10', 10000, 'prevod'),         // za listopad pozdě
+    { ...platba('ucetni', '2026-12-10', 10000, 'prevod'), zaMesic: '2026-11' }, // za listopad pozdě
     platba('hotovostni', '2026-10-03', 8000, 'hotove'),
     platba('hotovostni', '2026-11-02', 5000, 'vypis'),       // hotovostní nájemník poslal převod
   ],
@@ -86,7 +86,9 @@ test('statistiky: příjmy po měsících, účet vs. hotově, očekáváno, dlu
   assert.deepEqual(s.mesice.map(m => [m.vcas, m.pozde, m.vubec]), [[2, 0, 0], [0, 1, 1], [0, 0, 0]]);
   // aktuální dluh po splatnosti (prosinec ještě běží): hotovostní 3 000
   assert.equal(s.dluh, 3000);
+  // úspěšnost podle „za měsíc“: říjen 18 000 + listopad 15 000 (pozdní platba za listopad) z 54 000
   assert.equal(Math.round(s.uspesnost * 100), 61);
+  assert.deepEqual(s.mesice.map(m => m.pokryto), [18000, 15000, 0]);
 });
 
 test('statistiky: filtr Hotově a filtr nemovitosti', () => {
