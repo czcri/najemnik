@@ -8,6 +8,11 @@
   "display": "standalone",
   "background_color": "#f4f6f9",
   "theme_color": "#2d3a5c",
+  "shortcuts": [
+    { "name": "Vložit platbu", "url": "./#/vlozit-platbu", "icons": [{ "src": "ikony/ikona-192.png", "sizes": "192x192" }] },
+    { "name": "Hotovost", "url": "./#/?karta=hotovost", "icons": [{ "src": "ikony/ikona-192.png", "sizes": "192x192" }] },
+    { "name": "Dlužníci", "url": "./#/dluznici", "icons": [{ "src": "ikony/ikona-192.png", "sizes": "192x192" }] }
+  ],
   "icons": [
     { "src": "ikony/ikona-192.png", "sizes": "192x192", "type": "image/png" },
     { "src": "ikony/ikona-512.png", "sizes": "512x512", "type": "image/png" },

@@ -1,5 +1,7 @@
-import { Link } from 'react-router-dom';
-import { AlertTriangle, BarChart3, Building2, ChevronRight, FileUp, Plus, Users, Wallet, type LucideIcon } from 'lucide-react';
+import { useRef } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { HlavniKarta, useHotovostDnes, type HlavniKartaRef } from '../components/HlavniKarta';
+import { AlertTriangle, BarChart3, Banknote, Building2, ChevronRight, FileUp, Plus, Users, Wallet, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { AppShell, Main } from '../components/ui';
 import { useData } from '../data/store';
@@ -38,6 +40,10 @@ export default function Prehled() {
   const procento = tento.ocekavano ? Math.min(100, (tento.prijato / tento.ocekavano) * 100) : 0;
   const zaplatilo = aktivni.filter(r => r.tentoMesic === 0 && r.mel > 0).length;
   const zaloha = zalohaStara(data.nastaveni.posledniZaloha, dnes, data.najemnici.length > 0);
+  const karta = useRef<HlavniKartaRef>(null);
+  const [parametry] = useSearchParams();
+  const uvodni = { hotovost: 1, ucet: 2 }[parametry.get('karta') ?? ''] ?? 0;
+  const hotovost = useHotovostDnes();
 
   const dlazdice: Dlazdice[] = [
     { to: '/najemnici', label: 'Nájemníci', sub: pocet(aktivni.length, 'nájemník', 'nájemníci', 'nájemníků'), icon: Users, tone: 'bg-status-over-soft text-status-over' },
@@ -70,7 +76,18 @@ export default function Prehled() {
       </header>
 
       <Main>
-        <Link to="/platby" className="card-navy block p-6">
+        {(hotovost.dnes.length > 0 || hotovost.poTerminu.length > 0) && (
+          <button onClick={() => karta.current?.ukaz(1)} className="mb-3 flex w-full items-center gap-3 rounded-2xl bg-status-due-soft px-4 py-3 text-left text-sm">
+            <Banknote className="size-5 shrink-0 text-status-due" />
+            <span className="flex-1">
+              {hotovost.dnes.length > 0 && <b className="block">Dnes čekáš hotovost: {hotovost.dnes.map(p => `${p.najemnik.jmeno} (${kc(p.chybi)})`).join(', ')}</b>}
+              {hotovost.poTerminu.length > 0 && <span className="block text-status-due">Po termínu: {hotovost.poTerminu.map(p => p.najemnik.jmeno).join(', ')}</span>}
+            </span>
+            <ChevronRight className="size-4 text-muted-foreground" />
+          </button>
+        )}
+        <HlavniKarta ref={karta} uvodni={uvodni} mesic={
+        <Link to="/platby" className="card-navy block min-h-[392px] p-6">
           <div className="flex items-center justify-between">
             <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold">{NazevMesice(mesic)}</span>
             <span className="text-xs font-semibold opacity-70 tabular">{Math.round(procento)} % vybráno</span>
@@ -90,9 +107,9 @@ export default function Prehled() {
               <p className="text-lg font-bold tabular">{kc(tento.ocekavano)}</p>
             </div>
           </div>
-        </Link>
+        </Link>} />
 
-        <h2 className="mt-8 mb-3 px-2 text-sm font-bold text-muted-foreground">Rychlé akce</h2>
+        <h2 className="mt-6 mb-3 px-2 text-sm font-bold text-muted-foreground">Rychlé akce</h2>
         <div className="grid grid-cols-2 gap-3">
           {dlazdice.map(t => t.label === 'Vložit platbu' ? (
             <Link to={t.to} key={t.label} className="card-hero flex min-h-[128px] flex-col justify-between p-4 transition-transform active:scale-[0.97]">

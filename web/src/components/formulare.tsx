@@ -159,7 +159,7 @@ export function FormNajemnik({ najemnik, onClose, onUlozeno }: { najemnik?: Naje
     jmeno: najemnik?.jmeno ?? '', osloveni: najemnik?.osloveni ?? '', oznaceni: najemnik?.oznaceni ?? '',
     zacatek: najemnik?.zacatek ?? mesicZData(dnes), castka: '', telefon: najemnik?.telefon ?? '', email: najemnik?.email ?? '',
     vs: najemnik?.vs ?? '', poznamka: najemnik?.poznamka ?? '', konec: najemnik?.konec ?? '',
-    ucetProPlatby: najemnik?.ucetProPlatby ?? '',
+    ucetProPlatby: najemnik?.ucetProPlatby ?? '', denHotovosti: najemnik?.denHotovosti ? String(najemnik.denHotovosti) : '',
   });
   const [zpusob, setZpusob] = useState<Zpusob>(najemnik?.zpusobPlaceni ?? 'ucet');
   const [ucty, setUcty] = useState<string[]>(najemnik?.uctyPlatce ?? []);
@@ -181,6 +181,8 @@ export function FormNajemnik({ najemnik, onClose, onUlozeno }: { najemnik?: Naje
     if (!f.oznaceni.trim()) return setChyba('Vyplňte označení nemovitosti.');
     if (!/^\d{4}-\d{2}$/.test(f.zacatek)) return setChyba('Vyplňte, od kdy platí nájem.');
     if (f.konec && f.konec < f.zacatek) return setChyba('Konec nájmu je před jeho začátkem.');
+    const den = f.denHotovosti.trim() ? Number(f.denHotovosti) : undefined;
+    if (den !== undefined && !(Number.isInteger(den) && den >= 1 && den <= 31)) return setChyba('Den, kdy čekáte hotovost, musí být číslo 1–31.');
     let predpisy: Najemnik['predpisy'];
     if (najemnik) {
       // Posun začátku: nájem platný k novému začátku začne od něj, pozdější změny zůstanou.
@@ -195,6 +197,7 @@ export function FormNajemnik({ najemnik, onClose, onUlozeno }: { najemnik?: Naje
       ...najemnik, id: najemnik?.id ?? noveId(), jmeno: f.jmeno.trim(), oznaceni: f.oznaceni.trim(), zacatek: f.zacatek,
       konec: f.konec || null, predpisy, osloveni: f.osloveni.trim(), telefon: f.telefon.trim(), email: f.email.trim(),
       vs: f.vs.trim(), poznamka: f.poznamka.trim(), zpusobPlaceni: zpusob, uctyPlatce: ucty, ucetProPlatby: f.ucetProPlatby,
+      denHotovosti: zpusob === 'hotove' ? den : undefined,
     };
     await akce.ulozNajemnika(novy);
     toast('Uloženo');
@@ -217,6 +220,11 @@ export function FormNajemnik({ najemnik, onClose, onUlozeno }: { najemnik?: Naje
         <Pole label="Jméno"><input value={f.jmeno} onChange={zmen('jmeno')} autoFocus={!najemnik} className={VSTUP} /></Pole>
         <Pole label="Způsob placení"><Prepinac hodnota={zpusob} onChange={setZpusob}
           volby={[{ k: 'ucet', l: 'Na účet', i: Landmark }, { k: 'hotove', l: 'Hotově', i: Banknote }]} /></Pole>
+        {zpusob === 'hotove' && (
+          <Pole label="Hotovost čekám k (den v měsíci)" napoveda="Např. 5 = každého 5. Podle toho se řadí seznam Hotovost na přehledu.">
+            <input inputMode="numeric" value={f.denHotovosti} onChange={zmen('denHotovosti')} placeholder="1–31" className={VSTUP} />
+          </Pole>
+        )}
         <Pole label="Nemovitost" napoveda="Adresa nebo vlastní označení, např. „Byt 2 – Kolín“."><input value={f.oznaceni} onChange={zmen('oznaceni')} className={VSTUP} /></Pole>
         <div className="grid grid-cols-2 gap-3">
           <Pole label="Nájem od"><input type="month" value={f.zacatek} onChange={zmen('zacatek')} className={VSTUP} /></Pole>

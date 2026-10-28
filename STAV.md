@@ -36,3 +36,16 @@ Hotovo:
 Další kroky / nápady:
 - Uživatel vyzkouší v telefonu → připomínky.
 - Návrhy na později: QR platba, kauce, zámek PIN, notifikace 1. v měsíci, export statistik, součet hotovosti pro účetnictví.
+
+## 2026-10-28 – verze 2.1: hotovost na hlavní kartě
+
+Hotovo (spec. kap. 13):
+- Hlavní karta posuvná: Měsíc · Hotovost · Na účet (tečky s názvy pod kartou).
+- Hotovost: seznam hotovostních nájemníků bez zaplaceného měsíce, řazený podle nového pole „Hotovost čekám k (den)“; stavy nezaplaceno / částečně / zaplaceno (zmizí); zaškrtnutí zapíše platbu hotově (+ „Zpět“), klepnutí na částku = jiná částka / datum. Obnova 1. dne v měsíci automaticky (počítá se z plateb v měsíci).
+- Na účet: stejný přehled bez zaškrtávání + odkaz na import (k doladění, výpisy se nahrávají na konci měsíce).
+- Banner na přehledu „Dnes čekáš hotovost / Po termínu“.
+- Nastavení → Připomínky hotovosti v kalendáři (odkaz do Google Kalendáře s opakováním, nebo .ics).
+- Zkratky na ikoně aplikace (manifest shortcuts).
+- Testy: 49 `core/` + kouřový test 27 kontrol.
+
+Odloženo: widget na plochu + skutečné notifikace (nativní obal Capacitor/APK).

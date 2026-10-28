@@ -2,6 +2,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Banknote, Home, Landmark, ListChecks, Plus, Settings, Users, X, type LucideIcon } from 'lucide-react';
 import { createContext, useCallback, useContext, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { kc } from '../lib/format';
 import type { Stav, Zpusob } from '../types';
 
@@ -100,8 +101,8 @@ export const Chip = ({ stav, children }: { stav: Stav; children: ReactNode }) =>
 
 // Spodní panel (formuláře, upomínka).
 export function Panel({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
-  return (
-    <div className="fixed inset-0 z-30 flex items-end bg-black/40" onClick={onClose}>
+  return createPortal(
+    <div className="fixed inset-0 z-30 flex items-end bg-black/40 text-foreground" onClick={onClose}>
       <div onClick={e => e.stopPropagation()}
         className="animace-panel mx-auto max-h-[92vh] w-full max-w-[430px] overflow-y-auto rounded-t-[28px] bg-background p-5 pb-[max(2rem,env(safe-area-inset-bottom))]">
         <div className="mb-4 flex items-center justify-between gap-3">
@@ -110,7 +111,8 @@ export function Panel({ title, onClose, children }: { title: string; onClose: ()
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -157,20 +159,30 @@ export const Chyba = ({ text }: { text: string | null }) =>
   text ? <p className="rounded-2xl bg-status-debt-soft px-4 py-3 text-sm font-semibold text-status-debt">{text}</p> : null;
 
 // Krátká potvrzení („Platba uložena“).
-const ToastCtx = createContext<(t: string) => void>(() => {});
+type Akce = { popis: string; onClick: () => void };
+const ToastCtx = createContext<(t: string, akce?: Akce) => void>(() => {});
+let casovac: number | undefined;
 export function ToastProvider({ children }: { children: ReactNode }) {
-  const [text, setText] = useState<string | null>(null);
-  const ukaz = useCallback((t: string) => {
-    setText(t);
-    window.clearTimeout((ukaz as unknown as { t?: number }).t);
-    (ukaz as unknown as { t?: number }).t = window.setTimeout(() => setText(null), 2200);
+  const [toast, setToast] = useState<{ text: string; akce?: Akce } | null>(null);
+  const ukaz = useCallback((text: string, akce?: Akce) => {
+    setToast({ text, akce });
+    window.clearTimeout(casovac);
+    casovac = window.setTimeout(() => setToast(null), akce ? 6000 : 2200);
   }, []);
   return (
     <ToastCtx.Provider value={ukaz}>
       {children}
-      {text && (
+      {toast && (
         <div role="status" className="animace-toast pointer-events-none fixed inset-x-0 bottom-28 z-40 flex justify-center px-4">
-          <span className="rounded-full bg-foreground px-5 py-2.5 text-sm font-semibold text-background shadow-lg">{text}</span>
+          <span className="pointer-events-auto flex items-center gap-4 rounded-full bg-foreground py-2.5 pr-2.5 pl-5 text-sm font-semibold text-background shadow-lg">
+            {toast.text}
+            {toast.akce && (
+              <button onClick={() => { toast.akce!.onClick(); setToast(null); }} className="rounded-full bg-background/15 px-3 py-1 font-bold text-[oklch(0.8_0.12_162)]">
+                {toast.akce.popis}
+              </button>
+            )}
+            {!toast.akce && <span className="pr-2.5" />}
+          </span>
         </div>
       )}
     </ToastCtx.Provider>

@@ -216,7 +216,7 @@ Změny proti pilotu:
 - **Hotově vs. na účet je zásadní:** nájemník má `zpusobPlaceni: 'ucet' | 'hotove'` (výchozí pro nové platby, filtr, ikona); statistiky počítají podle skutečného zdroje platby (`vypis`/`prevod` = účet, `hotove` = hotovost).
 - Návrhy na později (nerozhodnuto): QR platba, kauce, zámek PIN, notifikace 1. v měsíci.
 
-## 13. Posuvná hlavní karta: Hotovost a Na účet (návrh 2026-10-28, k odsouhlasení)
+## 13. Posuvná hlavní karta: Hotovost a Na účet (odsouhlaseno a implementováno 2026-10-28, verze 2.1)
 
 **Hlavní karta na přehledu je posuvná do strany** (tečky pod kartou):
 1. **Měsíc** – jako dosud (přišlo, % vybráno, dluh po splatnosti, očekáváno).
@@ -236,7 +236,11 @@ Změny proti pilotu:
 
 **Strana Na účet:** stejný princip pro nájemníky „Na účet“ (bez zaškrtávání – platby přicházejí z výpisu nebo ručního zápisu), s informací „poslední import výpisu: …“. Protože výpisy se nahrávají až na konci měsíce, bude v průběhu měsíce většinou prázdná → **k doladění** (možnosti: automatické načítání Fio přes API, e-mailová oznámení banky, ruční odškrtnutí převodu).
 
-**Upozornění (k doladění):** webová aplikace bez serveru nemůže sama poslat notifikaci, když je zavřená. Možnosti:
+**Zkratky na ikoně** (podržet ikonu aplikace): Vložit platbu · Hotovost · Dlužníci.
+
+**Widget na plochu** – odloženo; vyžaduje nativní obal (Capacitor, APK), který by zároveň umožnil skutečné notifikace bez serveru.
+
+**Upozornění (implementováno a + b; c odloženo):** webová aplikace bez serveru nemůže sama poslat notifikaci, když je zavřená. Možnosti:
 - a) **Kalendář** – aplikace vytvoří opakované události („Hotovost – Novák, každého 5.“) do Google Kalendáře; upozornění pak dělá kalendář. Bez serveru, data neodcházejí. *(doporučeno jako první krok)*
 - b) Při otevření aplikace banner „Dnes čekáš hotovost od …“.
 - c) Skutečné push notifikace – potřebují malý server; na něj by odcházel jen rozpis dnů, ne jména a částky.

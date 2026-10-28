@@ -17,6 +17,7 @@ export type Najemnik = {
   osloveni?: string;
   vs?: string;
   zpusobPlaceni?: Zpusob;
+  denHotovosti?: number; // hotovost čekám k tomuto dni v měsíci (1–31)
   uctyPlatce?: string[]; // účty, ze kterých platí
   ucetProPlatby?: string; // můj účet, kam platí
   poznamkaDluh?: { text: string; datum: string };

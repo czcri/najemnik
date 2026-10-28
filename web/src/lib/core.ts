@@ -3,6 +3,7 @@ import * as logika from '../../../core/logika.js';
 import * as vypisy from '../../../core/vypisy.js';
 import * as parovani from '../../../core/parovani.js';
 import * as stat from '../../../core/statistiky.js';
+import * as hotovost from '../../../core/hotovost.js';
 import type { Data, Najemnik, Platba, PravidlaImportu, Stav, Vydaj, Zpusob } from '../types';
 
 type F<T> = T;
@@ -49,4 +50,12 @@ export const statistiky = stat.statistiky as unknown as (
   d: { najemnici: Najemnik[]; platby: Platba[]; vydaje: Vydaj[] }, od: string, doMesice: string, dnes: string,
   filtr?: { zpusob?: 'vse' | Zpusob; oznaceni?: string | null },
 ) => Statistiky;
+export type PolozkaMesice = {
+  najemnik: Najemnik; mel: number; zaplaceno: number; chybi: number; stav: 'nezaplaceno' | 'castecne' | 'zaplaceno';
+  ocekavano: string | null; dnes: boolean; poTerminu: boolean;
+};
+export const seznamMesice = hotovost.seznamMesice as unknown as (n: Najemnik[], p: Platba[], v: Vydaj[], dnes: string, zpusob: Zpusob) =>
+  { polozky: PolozkaMesice[]; celkem: number; zaplaceno: number; prevzato: number };
+export const odkazKalendare = hotovost.odkazKalendare as unknown as (n: Najemnik, castka: number, odData: string) => string;
+export const icsHotovosti = hotovost.icsHotovosti as unknown as (p: { najemnik: Najemnik; castka: number }[], odData: string, razitko: string) => string;
 export const zpusobPlatby = stat.zpusobPlatby as unknown as (p: Platba, n?: Najemnik) => Zpusob;

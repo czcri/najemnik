@@ -98,5 +98,7 @@
 
 @keyframes vyjet { from { transform: translateY(100%); } to { transform: translateY(0); } }
 @keyframes objevit { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.bez-posuvniku { scrollbar-width: none; }
+.bez-posuvniku::-webkit-scrollbar { display: none; }
 .animace-panel { animation: vyjet 0.22s ease-out; }
 .animace-toast { animation: objevit 0.2s ease-out; }

@@ -61,7 +61,7 @@ async function jdi(hash) { await js(`location.hash = ${JSON.stringify(hash)}`); 
 // Klik na tlačítko / odkaz podle viditelného textu nebo aria-label.
 async function klik(popis, index = 0) {
   const ok = await js(`(() => { const p = ${JSON.stringify(popis)};
-    const el = [...document.querySelectorAll('button, a, label')].filter(e => (e.getAttribute('aria-label') ?? e.innerText.trim()) === p || e.innerText.trim() === p)[${index}];
+    const el = [...document.querySelectorAll('button, a, label')].filter(e => (e.getAttribute('aria-label') ?? e.innerText.trim()) === p || e.innerText.trim() === p).at(${index});
     if (!el) return false; el.click(); return true; })()`);
   if (!ok) throw new Error(`Nenalezeno k kliknutí: ${popis}`);
   await pockej(300);
@@ -186,6 +186,49 @@ try {
   t = await text();
   over(t.includes('Šablony zpráv') && t.includes('Moje účty'), 'nastavení');
   await snimek('nastaveni');
+
+  // 6b) Hotovost: nájemník platící hotově, čekám k 15. (= dnes)
+  await jdi('#/najemnici');
+  await klik('Nový nájemník');
+  await vypln({ 'Jméno': 'Hana Hotová', 'Nemovitost': 'Byt 3', 'Nájem od': '2026-10', 'Nájem vč. služeb': '9000' });
+  await klik('Hotově', -1); // přepínač v otevřeném panelu (za ním je stejnojmenný filtr seznamu)
+  await vypln({ 'Hotovost čekám k (den v měsíci)': '15' });
+  await klik('Uložit');
+  await jdi('#/');
+  await pockej(400);
+  t = await text();
+  over(t.includes('Dnes čekáš hotovost: Hana Hotová'), 'banner „Dnes čekáš hotovost“', t.slice(0, 300));
+  await klik('Ukázat Hotovost');
+  await pockej(600);
+  t = await text();
+  over(t.includes('Hana Hotová') && t.includes('čekám dnes'), 'strana Hotovost se seznamem');
+  await snimek('karta-hotovost');
+  await klik('Převzato od Hana Hotová');
+  await pockej(500);
+  t = await text();
+  over(t.includes('Všechna hotovost za tento měsíc převzata') && t.includes('Převzato ' + kc(9000)), 'zaškrtnutí: položka zmizí, platba zapsána');
+  await klik('Zpět');
+  await pockej(500);
+  t = await text();
+  over(t.includes('Hana Hotová') && t.includes('čekám dnes'), 'Zpět: platba smazána, položka zpět v seznamu');
+  await klik(kc(9000));
+  await vypln({ 'Převzatá částka': '4000' });
+  await klik('Zapsat převzetí');
+  await pockej(500);
+  t = await text();
+  over(t.includes(kc(5000)) && t.includes('chybí z ' + kc(9000)), 'částečné převzetí: chybí 5 000 z 9 000', t.slice(0, 600));
+  await pockej(800);
+  const posun = await js(`(() => { const el = document.querySelector('.snap-x'); return [el.scrollLeft, el.clientWidth]; })()`);
+  over(Math.abs(posun[0] - posun[1]) < 2, 'karta zůstala na straně Hotovost', JSON.stringify(posun));
+  await snimek('karta-hotovost-castecne');
+  await klik('Ukázat Na účet');
+  await pockej(600);
+  await snimek('karta-na-ucet');
+  await jdi('#/nastaveni');
+  t = await text();
+  over(t.includes('Připomínky hotovosti v kalendáři') && t.includes('každý měsíc'), 'nastavení: připomínky v kalendáři');
+  const odkaz = await js(`[...document.querySelectorAll('a')].find(a => a.href.includes('calendar.google.com'))?.href ?? ''`);
+  over(odkaz.includes('BYMONTHDAY%3D15'), 'odkaz do Google Kalendáře s opakováním 15.', odkaz);
 
   // 7) Import výpisu Fio (vymyšlená data)
   const csv = '\ufeff"Datum";"Objem";"Měna";"Protiúčet";"Kód banky";"Zpráva pro příjemce";"Poznámka";"Typ";"Název banky";"Název protiúčtu";"Reference plátce";"KS";"VS";"SS";"VS"\r\n'

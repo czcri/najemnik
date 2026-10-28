@@ -1,15 +1,15 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronRight, Database, Plus, Trash2 } from 'lucide-react';
+import { CalendarPlus, ChevronRight, Database, Download, Plus, Trash2 } from 'lucide-react';
 import { AppShell, Card, Main, Nadpis, Pole, Tlacitko, VSTUP, useToast } from '../components/ui';
 import { useData } from '../data/store';
 import { VYCHOZI_SABLONY } from '../data/vychozi';
-import { normalizujUcet } from '../lib/core';
-import { datumCz, noveId } from '../lib/format';
+import { aktualniNajem, icsHotovosti, mesicZData, normalizujUcet, odkazKalendare } from '../lib/core';
+import { datumCz, kc, noveId, posunMesic } from '../lib/format';
 import { ZNACKY, doplnSablonu } from '../lib/zpravy';
 import type { Najemnik, Sablona } from '../types';
 
-export const VERZE_APLIKACE = '2.0';
+export const VERZE_APLIKACE = '2.1';
 
 const UKAZKA: Najemnik = {
   id: 'x', jmeno: 'Jana Nováková', osloveni: 'paní Nováková', oznaceni: 'Byt 2 – Kolín', zacatek: '2026-01', konec: null,
@@ -89,6 +89,8 @@ export default function Nastaveni() {
           </section>
         )}
 
+        <Kalendar />
+
         <Nadpis>Moje účty</Nadpis>
         <Card>
           {n.ucty.length === 0 && <p className="p-4 text-sm text-muted-foreground">Účty, kam vám chodí nájem. Import z banky je doplní sám.</p>}
@@ -137,5 +139,49 @@ export default function Nastaveni() {
         <Tlacitko typ="vedlejsi" onClick={() => location.reload()}>Načíst znovu</Tlacitko>
       </Main>
     </AppShell>
+  );
+}
+
+// Připomínky hotovosti v kalendáři telefonu (upozornění dělá kalendář, aplikace nepotřebuje server).
+function Kalendar() {
+  const { data, dnes } = useData();
+  const hotovostni = data.najemnici
+    .filter(n => n.zpusobPlaceni === 'hotove' && Number.isInteger(n.denHotovosti) && (!n.konec || n.konec >= mesicZData(dnes)))
+    .sort((a, b) => a.denHotovosti! - b.denHotovosti!);
+  // První výskyt: tento měsíc, pokud den ještě nebyl, jinak příští měsíc.
+  const prvni = (den: number) => {
+    const m = +dnes.slice(8, 10) <= den ? mesicZData(dnes) : posunMesic(mesicZData(dnes), 1);
+    return `${m}-${String(Math.min(den, 28)).padStart(2, '0')}`;
+  };
+  function stahniIcs() {
+    const text = icsHotovosti(hotovostni.map(n => ({ najemnik: n, castka: aktualniNajem(n, dnes) })), prvni(1),
+      new Date().toISOString().replace(/[-:]/g, '').slice(0, 15) + 'Z');
+    const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(new Blob([text], { type: 'text/calendar' })), download: 'najemnik-hotovost.ics' });
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+  }
+  return (
+    <>
+      <Nadpis>Připomínky hotovosti v kalendáři</Nadpis>
+      <Card>
+        {hotovostni.length === 0 && <p className="p-4 text-sm text-muted-foreground">Nájemníkům, kteří platí hotově, vyplňte v profilu „Hotovost čekám k (den v měsíci)“.</p>}
+        {hotovostni.map(n => (
+          <a key={n.id} href={odkazKalendare(n, aktualniNajem(n, dnes), prvni(n.denHotovosti!))} target="_blank" rel="noreferrer"
+            className="flex items-center gap-3 px-4 py-3 active:bg-muted">
+            <span className="flex size-10 shrink-0 flex-col items-center justify-center rounded-xl bg-status-ok-soft text-cash">
+              <span className="text-sm leading-none font-extrabold">{n.denHotovosti}.</span>
+            </span>
+            <span className="min-w-0 flex-1"><b className="block truncate text-sm">{n.jmeno}</b><span className="text-xs text-muted-foreground">každý měsíc · {kc(aktualniNajem(n, dnes))}</span></span>
+            <CalendarPlus className="size-5 text-primary" />
+          </a>
+        ))}
+      </Card>
+      {hotovostni.length > 0 && (
+        <>
+          <p className="mt-2 px-2 text-xs text-muted-foreground">Klepnutím otevřete Google Kalendář s opakovanou událostí – stačí uložit. Při změně dne nebo částky událost upravte i v kalendáři. Událost (jméno a částka) se uloží do vašeho Google účtu.</p>
+          <button onClick={stahniIcs} className="mt-2 flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-muted text-sm font-bold"><Download className="size-4" />Vše jako soubor .ics (jiný kalendář)</button>
+        </>
+      )}
+    </>
   );
 }
