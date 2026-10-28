@@ -155,6 +155,17 @@ export function Tlacitko({ children, onClick, typ = 'hlavni', type = 'button', d
   );
 }
 
+// Záložky (segmentový přepínač) nad obsahem obrazovky.
+export function Zalozky<T extends string>({ hodnota, volby, onChange }: { hodnota: T; volby: { k: T; l: string }[]; onChange: (k: T) => void }) {
+  return (
+    <nav className="grid gap-1 rounded-2xl bg-muted p-1 text-sm font-bold" style={{ gridTemplateColumns: `repeat(${volby.length}, minmax(0, 1fr))` }}>
+      {volby.map(v => (
+        <button key={v.k} onClick={() => onChange(v.k)} className={`h-10 rounded-xl px-1 ${hodnota === v.k ? 'bg-card shadow-sm' : 'text-muted-foreground'}`}>{v.l}</button>
+      ))}
+    </nav>
+  );
+}
+
 // Výběr měsíce: ‹ Říjen 2026 › – šipky po měsících, klepnutí na měsíc = výběr měsíce a roku.
 export function VolbaMesice({ hodnota, onChange, min, max, kompaktni }: {
   hodnota: string; onChange: (m: string) => void; min?: string; max?: string; kompaktni?: boolean;

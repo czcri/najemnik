@@ -4,6 +4,7 @@ import * as vypisy from '../../../core/vypisy.js';
 import * as parovani from '../../../core/parovani.js';
 import * as stat from '../../../core/statistiky.js';
 import * as hotovost from '../../../core/hotovost.js';
+import * as dluhy from '../../../core/dluhy.js';
 import type { Data, Najemnik, Platba, PravidlaImportu, Stav, UpravaNajmu, Vydaj, Zpusob } from '../types';
 
 type F<T> = T;
@@ -67,3 +68,8 @@ export const seznamMesice = hotovost.seznamMesice as unknown as (n: Najemnik[], 
 export const odkazKalendare = hotovost.odkazKalendare as unknown as (n: Najemnik, castka: number, odData: string) => string;
 export const icsHotovosti = hotovost.icsHotovosti as unknown as (p: { najemnik: Najemnik; castka: number }[], odData: string, razitko: string) => string;
 export const zpusobPlatby = stat.zpusobPlatby as unknown as (p: Platba, n?: Najemnik) => Zpusob;
+
+export const dluhyZaMesic = dluhy.dluhyZaMesic as unknown as (n: Najemnik[], p: Platba[], v: Vydaj[], dnes: string, mesic: string) =>
+  { najemnik: Najemnik; mel: number; zaplaceno: number; chybi: number }[];
+export const dluhyVMesici = dluhy.dluhyVMesici as unknown as (n: Najemnik[], p: Platba[], v: Vydaj[], dnes: string, mesic: string) =>
+  { najemnik: Najemnik; mel: number; prijato: number; predplaceno: number; dluh: number }[];

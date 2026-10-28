@@ -285,3 +285,15 @@ Změny proti pilotu:
 - V tabulce je upravený měsíc zvýrazněn a pod částkou je důvod. Tabulka má navíc **příští měsíc** (šedě, „budoucí“), aby šla sleva domluvit dopředu.
 - Data: `najemnik.upravy = [{ mesic, castka, duvod }]`; standardní nájem (předpis) i „Změnit nájem“ (trvalá změna) zůstávají beze změny.
 - Upravená částka se promítne do dluhu, předvyplněné platby, seznamu Hotovost, upomínek ({najem}) a statistik.
+
+## 19. Záložky v Platbách a Dlužnících (2026-10-29, verze 2.6)
+
+**Platby** (výběr měsíce nahoře):
+- **Přijato v měsíci** (výchozí): platby s datem ve vybraném měsíci bez ohledu na to, za který měsíc jsou; karta „Přišlo …“ (na účet / hotově / počet); u platby za jiný měsíc štítek „za listopad 2026“.
+- **Za měsíc**: dosavadní pohled – kdo má měsíc zaplacený / nezaplacený, platby za daný měsíc (i dopředu / dodatečně).
+
+**Dlužníci** (Za měsíc a V měsíci s výběrem měsíce, výchozí minulý měsíc):
+- **Celkem** (výchozí): dluh po splatnosti k dnešku (dosavadní).
+- **Za měsíc**: kdo k dnešku **stále dluží** za vybraný měsíc (pozdě zaplacené a vyrovnané se nezobrazí); „měl / zaplaceno“, chybí.
+- **V měsíci**: předpis měsíce (nájem + úpravy + výdaje) vs. co v tom měsíci **skutečně přišlo** (podle data, za jakýkoli měsíc) + přebytek z předchozích měsíců (platba dopředu / přeplatek se započte do budoucích měsíců). Nedoplatek z předchozích měsíců se nepřenáší. Příklad: nájem 20 000, přišlo 18 000 → dluh v měsíci 2 000.
+- Logika `core/dluhy.js` (testy `tests/dluhy.test.mjs`).
