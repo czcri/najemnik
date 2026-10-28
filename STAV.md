@@ -41,7 +41,7 @@ Další kroky / nápady:
 
 Hotovo (spec. kap. 13):
 - Hlavní karta posuvná: Měsíc · Hotovost · Na účet (tečky s názvy pod kartou).
-- Hotovost: seznam hotovostních nájemníků bez zaplaceného měsíce, řazený podle nového pole „Hotovost čekám k (den)“; stavy nezaplaceno / částečně / zaplaceno (zmizí); zaškrtnutí zapíše platbu hotově (+ „Zpět“), klepnutí na částku = jiná částka / datum. Obnova 1. dne v měsíci automaticky (počítá se z plateb v měsíci).
+- Hotovost: seznam hotovostních nájemníků bez zaplaceného měsíce, řazený podle nového pole „Hotovost čekám k (den)“; stavy nezaplaceno / částečně / zaplaceno (zmizí); zaškrtnutí otevře potvrzení převzetí (2.1.1), teprve potom se zapíše platba hotově (+ „Zpět“), klepnutí na částku = jiná částka / datum. Obnova 1. dne v měsíci automaticky (počítá se z plateb v měsíci).
 - Na účet: stejný přehled bez zaškrtávání + odkaz na import (k doladění, výpisy se nahrávají na konci měsíce).
 - Banner na přehledu „Dnes čekáš hotovost / Po termínu“.
 - Nastavení → Připomínky hotovosti v kalendáři (odkaz do Google Kalendáře s opakováním, nebo .ics).

@@ -79,8 +79,9 @@ async function vypln(pole) {
   await pockej(100);
 }
 let cislo = 0;
-async function snimek(nazev) {
-  const { data } = await cdp('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true });
+// celaStranka: false u posuvné karty – focení celé stránky dočasně mění rozměry a posune ji.
+async function snimek(nazev, celaStranka = true) {
+  const { data } = await cdp('Page.captureScreenshot', { format: 'png', captureBeyondViewport: celaStranka });
   await writeFile(path.join(SNIMKY, `${String(++cislo).padStart(2, '0')}-${nazev}.png`), Buffer.from(data, 'base64'));
 }
 let selhani = 0;
@@ -202,8 +203,16 @@ try {
   await pockej(600);
   t = await text();
   over(t.includes('Hana Hotová') && t.includes('čekám dnes'), 'strana Hotovost se seznamem');
-  await snimek('karta-hotovost');
+  await snimek('karta-hotovost', false);
   await klik('Převzato od Hana Hotová');
+  t = await text();
+  over(t.includes('Potvrdit převzetí hotovosti') && !t.includes('Převzato ' + kc(9000)), 'zaškrtnutí otevře potvrzení, zatím nic nezapsáno');
+  await snimek('potvrzeni-prevzeti', false);
+  await klik('Zrušit');
+  t = await text();
+  over(t.includes('čekám dnes') && t.includes('Převzato ' + kc(0)), 'Zrušit: nic se nezapsalo');
+  await klik('Převzato od Hana Hotová');
+  await klik('Potvrdit převzetí');
   await pockej(500);
   t = await text();
   over(t.includes('Všechna hotovost za tento měsíc převzata') && t.includes('Převzato ' + kc(9000)), 'zaškrtnutí: položka zmizí, platba zapsána');
@@ -213,17 +222,17 @@ try {
   over(t.includes('Hana Hotová') && t.includes('čekám dnes'), 'Zpět: platba smazána, položka zpět v seznamu');
   await klik(kc(9000));
   await vypln({ 'Převzatá částka': '4000' });
-  await klik('Zapsat převzetí');
+  await klik('Potvrdit převzetí');
   await pockej(500);
   t = await text();
   over(t.includes(kc(5000)) && t.includes('chybí z ' + kc(9000)), 'částečné převzetí: chybí 5 000 z 9 000', t.slice(0, 600));
   await pockej(800);
   const posun = await js(`(() => { const el = document.querySelector('.snap-x'); return [el.scrollLeft, el.clientWidth]; })()`);
   over(Math.abs(posun[0] - posun[1]) < 2, 'karta zůstala na straně Hotovost', JSON.stringify(posun));
-  await snimek('karta-hotovost-castecne');
+  await snimek('karta-hotovost-castecne', false);
   await klik('Ukázat Na účet');
   await pockej(600);
-  await snimek('karta-na-ucet');
+  await snimek('karta-na-ucet', false);
   await jdi('#/nastaveni');
   t = await text();
   over(t.includes('Připomínky hotovosti v kalendáři') && t.includes('každý měsíc'), 'nastavení: připomínky v kalendáři');

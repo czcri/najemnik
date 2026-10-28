@@ -229,8 +229,8 @@ Změny proti pilotu:
 - Seznam nájemníků s výchozím způsobem placení **Hotově**, kteří v aktuálním měsíci ještě nemají zaplaceno; **seřazeno podle dne „čekám k“** (bez dne na konec).
 - Položka: jméno, nemovitost, „čekám k 5. 11.“, částka, která za tento měsíc ještě chybí; po termínu zvýrazněno.
 - **Tři stavy:** nezaplaceno · **částečně – chybí X Kč** · zaplaceno (= zmizí ze seznamu).
-- **Zaškrtnutí** = zapíše platbu *hotově* s dnešním datem a částkou, která za měsíc chybí → položka zmizí, platba je v platbách, detailu, statistikách. Krátké potvrzení s možností **Zpět**.
-- **Klepnutí na částku** = změnit částku / datum před zapsáním (částečná platba → položka zůstane ve stavu „částečně“).
+- **Zaškrtnutí** (i klepnutí na částku) = otevře **potvrzení převzetí** (jméno, chybějící částka, datum – lze upravit); teprve **Potvrdit převzetí** zapíše platbu *hotově* → položka zmizí, platba je v platbách, detailu, statistikách. Poté ještě krátké „Zpět“. *(Změna 2026-10-28: dříve se zapisovalo hned bez potvrzení.)*
+- Nižší částka → položka zůstane ve stavu „částečně“.
 - Dole souhrn „Převzato 3 z 7 · 33 000 Kč“.
 - **Obnova 1. dne v měsíci** je automatická: stav se počítá z plateb s datem v aktuálním měsíci vůči nájmu (+ výdajům) tohoto měsíce, takže nový měsíc začíná s plným seznamem. Starší dluh se zde neřeší (je v Dlužnících); platba převodem od hotovostního nájemníka se také započte.
 

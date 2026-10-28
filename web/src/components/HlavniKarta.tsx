@@ -19,6 +19,16 @@ export const HlavniKarta = forwardRef<HlavniKartaRef, { mesic: ReactNode; uvodni
   };
   useImperativeHandle(ref, () => ({ ukaz }));
   useEffect(() => { ukaz(uvodni, false); }, [uvodni]);
+  // Po změně velikosti (otočení telefonu) dorovnat na aktuální stranu – snap to sám neudělá vždy.
+  const aktualni = useRef(strana);
+  aktualni.current = strana;
+  useEffect(() => {
+    const el = pas.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => ukaz(aktualni.current, false));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   const strany = [{ nazev: 'Měsíc', obsah: mesic }, { nazev: 'Hotovost', obsah: <StranaSeznamu zpusob="hotove" /> }, { nazev: 'Na účet', obsah: <StranaSeznamu zpusob="ucet" /> }];
   return (
@@ -76,7 +86,7 @@ function StranaSeznamu({ zpusob }: { zpusob: 'hotove' | 'ucet' }) {
           {s.polozky.map(p => (
             <li key={p.najemnik.id} className="flex items-center gap-3 rounded-2xl bg-white/5 p-2.5">
               {hotove && (
-                <button aria-label={`Převzato od ${p.najemnik.jmeno}`} onClick={() => prevzit(p)}
+                <button aria-label={`Převzato od ${p.najemnik.jmeno}`} onClick={() => setUpravit(p)}
                   className={`flex size-10 shrink-0 items-center justify-center rounded-full border-2 transition-colors active:bg-[oklch(0.7_0.13_162)] ${p.stav === 'castecne' ? 'border-[oklch(0.8_0.14_65)]' : 'border-white/40'}`}>
                   {p.stav === 'castecne' && <span className="size-3 rounded-full bg-[oklch(0.8_0.14_65)]" />}
                 </button>
@@ -99,7 +109,7 @@ function StranaSeznamu({ zpusob }: { zpusob: 'hotove' | 'ucet' }) {
       <div className="mt-4 flex items-center justify-between gap-3 border-t border-white/10 pt-3 text-xs">
         <span className="opacity-70 tabular">{hotove ? `Převzato ${kc(s.prevzato)}` : `Přišlo ${kc(s.prevzato)}`}</span>
         {hotove
-          ? <span className="text-right opacity-60">○ = převzato · částka = upravit</span>
+          ? <span className="text-right opacity-60">○ = převzít hotovost</span>
           : <Link to="/import" className="flex items-center gap-1 font-semibold opacity-80"><FileUp className="size-3.5" />{posledniImport ? `Import ${datumCz(posledniImport)}` : 'Nahrát výpis'}<ChevronRight className="size-3.5" /></Link>}
       </div>
       {upravit && <PanelPrevzeti p={upravit} onClose={() => setUpravit(null)} onPotvrdit={(c, d) => { prevzit(upravit, c, d); setUpravit(null); }} />}
@@ -113,9 +123,13 @@ function PanelPrevzeti({ p, onClose, onPotvrdit }: { p: PolozkaMesice; onClose: 
   const [datum, setDatum] = useState(dnes);
   const [chyba, setChyba] = useState<string | null>(null);
   return (
-    <Panel title={`Hotovost · ${p.najemnik.jmeno}`} onClose={onClose}>
+    <Panel title="Potvrdit převzetí hotovosti" onClose={onClose}>
       <div className="space-y-4 text-foreground">
-        <p className="text-sm text-muted-foreground">Za tento měsíc chybí {kc(p.chybi)}{p.stav === 'castecne' ? ` (z ${kc(p.mel)})` : ''}. Při nižší částce zůstane v seznamu jako „částečně“.</p>
+        <div className="rounded-2xl bg-status-ok-soft p-4">
+          <p className="text-lg font-extrabold">{p.najemnik.jmeno}</p>
+          <p className="text-sm text-muted-foreground">{p.najemnik.oznaceni} · za tento měsíc chybí {kc(p.chybi)}{p.stav === 'castecne' ? ` z ${kc(p.mel)}` : ''}</p>
+        </div>
+        <p className="text-sm text-muted-foreground">Zkontrolujte částku a datum. Při nižší částce zůstane nájemník v seznamu jako „částečně“.</p>
         <Pole label="Převzatá částka">
           <div className="flex h-16 items-center rounded-2xl border border-border bg-card px-4 focus-within:border-primary">
             <input autoFocus inputMode="numeric" value={castka} onChange={e => setCastka(e.target.value)} className="min-w-0 flex-1 bg-transparent text-[28px] font-extrabold tabular outline-none" />
@@ -125,8 +139,9 @@ function PanelPrevzeti({ p, onClose, onPotvrdit }: { p: PolozkaMesice; onClose: 
         <Pole label="Datum převzetí"><input type="date" value={datum} onChange={e => setDatum(e.target.value)} className={VSTUP} /></Pole>
         <Chyba text={chyba} />
         <Tlacitko onClick={() => { const c = parseCastka(castka); if (!c) return setChyba('Částka musí být kladné celé číslo v korunách.'); onPotvrdit(c, datum); }}>
-          Zapsat převzetí
+          Potvrdit převzetí
         </Tlacitko>
+        <Tlacitko typ="vedlejsi" onClick={onClose}>Zrušit</Tlacitko>
       </div>
     </Panel>
   );
