@@ -12,4 +12,4 @@ lovable zadani/
 dist/
 
 # zdrojové soubory loga (do aplikace jdou jen odvozené SVG ve web/public/logo)
-logo/
+/logo/
