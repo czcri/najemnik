@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  stavNajemnika, souhrn, zmenNajem, aktualniNajem, potrebaZalohy, parseCastka, navrhPlatby, obdobiPlatby,
+  stavNajemnika, souhrn, zmenNajem, aktualniNajem, potrebaZalohy, parseCastka, navrhPlatby, obdobiPlatby, nastavUpravu, najemVMesici,
   vytvorZalohu, nactiZalohu, rozsahMesicu,
 } from '../core/logika.js';
 
@@ -201,4 +201,27 @@ test('za který měsíc platba je', () => {
   assert.equal(obdobiPlatby({ datum: '2026-09-25', zaMesic: '2026-10' }, {}), '2026-10');
   assert.equal(obdobiPlatby({ datum: '2026-09-25' }, {}), '2026-09');
   assert.equal(obdobiPlatby({ datum: '2026-12-25' }, { platiDopredu: true }), '2027-01');
+});
+
+test('úprava nájmu pro měsíc (sleva) a návrat ke standardu', () => {
+  const n = test1();
+  const upravy = nastavUpravu(n, '2026-09', null, 8000, 'sleva – oprava topení');
+  assert.deepEqual(upravy, [{ mesic: '2026-09', castka: 8000, duvod: 'sleva – oprava topení' }]);
+  const s = stavNajemnika({ ...n, upravy }, [], DNES);
+  assert.equal(s.mel, 28000);
+  assert.deepEqual(s.radky[1].uprava, { mesic: '2026-09', castka: 8000, duvod: 'sleva – oprava topení' });
+  assert.equal(s.radky[1].najem, 8000);
+  assert.equal(s.radky[0].uprava, null);
+  // na více měsíců
+  const vic = nastavUpravu(n, '2026-10', '2026-12', 9000, '');
+  assert.deepEqual(vic.map(u => u.mesic), ['2026-10', '2026-11', '2026-12']);
+  assert.equal(najemVMesici({ ...n, upravy: vic }, '2026-12'), 9000);
+  assert.equal(najemVMesici({ ...n, upravy: vic }, '2027-01'), 10000, 'po období zase standard');
+  // částka = standard → úprava se zruší; null → zrušit
+  assert.deepEqual(nastavUpravu({ ...n, upravy }, '2026-09', null, 10000), []);
+  assert.deepEqual(nastavUpravu({ ...n, upravy: vic }, '2026-11', null, null).map(u => u.mesic), ['2026-10', '2026-12']);
+  // návrh platby počítá s upravenou částkou (budoucí měsíc)
+  const novy = { ...n, zacatek: '2026-10', predpisy: [{ od: '2026-10', slozky: [{ nazev: 'Nájem', castka: 10000 }] }] };
+  const p = navrhPlatby({ ...novy, upravy: nastavUpravu(novy, '2026-11', null, 7000) }, [platba('p', '2026-10-03', 10000)], DNES);
+  assert.deepEqual([p.zaMesic, p.castka], ['2026-11', 7000]);
 });

@@ -9,7 +9,7 @@ import type { Data, Najemnik, Nastaveni, Platba, Stav, Upominka, Vydaj } from '.
 export type StavNajemnika = {
   mel: number; zaplatil: number; dluh: number; tentoMesic: number; preplatek: number; stav: Stav;
   budouci?: Record<string, number>;
-  radky: { mesic: string; mel: number; najem: number; vydaj: number; zaplatil: number; prubeznyRozdil: number; chybi: number; stav: 'ok' | 'bezi' | 'dluh' }[];
+  radky: { mesic: string; mel: number; najem: number; vydaj: number; uprava: import('../types').UpravaNajmu | null; zaplatil: number; prubeznyRozdil: number; chybi: number; stav: 'ok' | 'bezi' | 'dluh' }[];
 };
 export type Prehled = StavNajemnika & { najemnik: Najemnik; ukonceny: boolean; najem: number };
 

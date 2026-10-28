@@ -178,6 +178,22 @@ try {
   t = await text();
   over(t.includes('Dluh kum.') && t.includes('výdaj ' + kc(2500)), 'záložka Měsíce s kumulativním dluhem a výdajem');
   await snimek('detail-mesice');
+  // Úprava „měl zaplatit“ pro měsíc (sleva) klepnutím na měsíc v tabulce
+  over((await text()).includes('budoucí'), 'tabulka Měsíce: příští měsíc jako budoucí');
+  await js(`[...document.querySelectorAll('button')].find(b => b.innerText.startsWith('Říjen 26')).click()`);
+  await pockej(300);
+  t = await text();
+  over(t.includes('Říjen 2026 – měl zaplatit') && t.includes('Standardní nájem v tomto měsíci'), 'klepnutí na měsíc otevře úpravu');
+  await vypln({ 'Nájem za tento měsíc (Kč)': '8000', 'Důvod': 'sleva – oprava topení' });
+  await klik('Uložit');
+  await pockej(400);
+  t = await text();
+  over(t.includes('sleva – oprava topení') && t.includes('chybí ' + kc(8000)), 'upravený měsíc: důvod v tabulce, chybí 8 000', t.slice(0, 600));
+  await js(`[...document.querySelectorAll('button')].find(b => b.innerText.startsWith('Říjen 26')).click()`);
+  await pockej(300);
+  await klik('Vrátit standardní nájem (' + kc(10000) + ')');
+  await pockej(400);
+  over((await text()).includes('chybí ' + kc(10000)) && !(await text()).includes('sleva – oprava topení'), 'vrácení standardního nájmu');
   const nid = await js('location.hash.split("/").pop()');
 
   // 5) Vložit platbu – výsledek po uložení
@@ -200,7 +216,7 @@ try {
   await snimek('prehled');
   await klik('O aplikaci');
   t = await text();
-  over(t.includes('verze 2.4.1') && t.toLowerCase().includes('vytvořilo'), 'panel O aplikaci z loga v záhlaví');
+  over(t.includes('verze 2.5') && t.toLowerCase().includes('vytvořilo'), 'panel O aplikaci z loga v záhlaví');
   await snimek('o-aplikaci', false);
   await klik('Zavřít');
   await jdi('#/dluznici');

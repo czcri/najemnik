@@ -4,7 +4,7 @@ import * as vypisy from '../../../core/vypisy.js';
 import * as parovani from '../../../core/parovani.js';
 import * as stat from '../../../core/statistiky.js';
 import * as hotovost from '../../../core/hotovost.js';
-import type { Data, Najemnik, Platba, PravidlaImportu, Stav, Vydaj, Zpusob } from '../types';
+import type { Data, Najemnik, Platba, PravidlaImportu, Stav, UpravaNajmu, Vydaj, Zpusob } from '../types';
 
 type F<T> = T;
 export const parseCastka = logika.parseCastka as F<(t: string) => number | null>;
@@ -19,6 +19,11 @@ export const jeUkonceny = logika.jeUkonceny as unknown as (n: Najemnik, dnes: st
 export type NavrhPlatby = { zaMesic: string; castka: number; doplatek: boolean; zaplaceno: number; mel: number };
 export const navrhPlatby = logika.navrhPlatby as unknown as (n: Najemnik, p: Platba[], dnes: string, v?: Vydaj[], zaMesic?: string | null) => NavrhPlatby;
 export const obdobiPlatby = logika.obdobiPlatby as unknown as (p: Platba, n?: Najemnik) => string;
+export const standardniNajem = logika.standardniNajem as unknown as (n: Najemnik, m: string) => number;
+export const najemVMesici = logika.najemVMesici as unknown as (n: Najemnik, m: string) => number;
+export const upravaVMesici = logika.upravaVMesici as unknown as (n: Najemnik, m: string) => UpravaNajmu | null;
+export const nastavUpravu = logika.nastavUpravu as unknown as (n: Najemnik, od: string, doMesice: string | null, castka: number | null, duvod?: string) => UpravaNajmu[];
+export const dalsiMesic = logika.dalsiMesic as (m: string) => string;
 export const mesicZData = logika.mesicZData as (d: string) => string;
 export const vytvorZalohu = logika.vytvorZalohu as unknown as (d: Data, cas: string) => object;
 export const nactiZalohu = logika.nactiZalohu as unknown as (text: string) => Omit<Data, 'nastaveni'> & { nastaveni: Partial<Data['nastaveni']> };

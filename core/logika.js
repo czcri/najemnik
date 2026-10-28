@@ -47,7 +47,23 @@ export function obdobiPlatby(platba, najemnik) {
   return najemnik?.platiDopredu ? dalsiMesic(m) : m;
 }
 
-const najemVMesici = (najemnik, mesic) => { const p = predpisVMesici(najemnik, mesic); return p ? castkaPredpisu(p) : 0; };
+// Standardní nájem měsíce podle předpisu (bez úprav).
+export const standardniNajem = (najemnik, mesic) => { const p = predpisVMesici(najemnik, mesic); return p ? castkaPredpisu(p) : 0; };
+// Úprava nájmu pro konkrétní měsíc (dohodnutá sleva / jiná částka): najemnik.upravy = [{ mesic, castka, duvod }].
+export const upravaVMesici = (najemnik, mesic) => (najemnik.upravy ?? []).find(u => u.mesic === mesic) ?? null;
+// Nájem, který se v měsíci skutečně platí: úprava, jinak předpis.
+export const najemVMesici = (najemnik, mesic) => upravaVMesici(najemnik, mesic)?.castka ?? standardniNajem(najemnik, mesic);
+
+// Nastaví (nebo zruší, je-li částka rovna standardu / null) úpravu nájmu pro měsíce od–do.
+export function nastavUpravu(najemnik, od, doMesice, castka, duvod = '') {
+  const mesice = rozsahMesicu(od, doMesice && doMesice >= od ? doMesice : od);
+  const upravy = (najemnik.upravy ?? []).filter(u => !mesice.includes(u.mesic));
+  for (const m of mesice) {
+    if (castka === null || castka === standardniNajem(najemnik, m)) continue;
+    upravy.push({ mesic: m, castka, ...(duvod ? { duvod } : {}) });
+  }
+  return upravy.sort((a, b) => a.mesic.localeCompare(b.mesic));
+}
 
 // vydaje = jednorázové výdaje / dluhy nájemníka { datum, castka, popis } – navyšují „měl zaplatit“ v měsíci data.
 // Platby se počítají do měsíce, za který jsou (obdobiPlatby). Co v měsíci přebývá, doplní nejdřív
@@ -86,12 +102,13 @@ export function stavNajemnika(najemnik, platby, dnes, vydaje = []) {
   let pool = 0;
   const radky = mesice.map(mesic => {
     const najem = najemVMesici(najemnik, mesic);
+    const uprava = upravaVMesici(najemnik, mesic);
     const vydaj = vydajeVMesici.get(mesic) ?? 0;
     const mel = najem + vydaj;
     const zaplatilZa = zaObdobi.get(mesic) ?? 0;
     const pokryto = Math.min(mel, zaplatilZa);
     pool += zaplatilZa - pokryto;
-    return { mesic, mel, najem, vydaj, zaplatil: zaplatilZa, pokryto };
+    return { mesic, mel, najem, vydaj, uprava, zaplatil: zaplatilZa, pokryto };
   });
   for (const r of radky) {
     const doplnit = Math.min(r.mel - r.pokryto, pool);

@@ -78,3 +78,7 @@ Odloženo: widget na plochu + skutečné notifikace (nativní obal Capacitor/APK
 ## 2026-10-29 – verze 2.4.1
 
 - SMS: částky s obyčejnými mezerami (pevná mezera dorazila jako „?“), pro SMS i obyčejné pomlčky/uvozovky.
+
+## 2026-10-29 – verze 2.5
+
+- Úprava nájmu pro konkrétní měsíc s důvodem (sleva), z tabulky Měsíce; příští měsíc v tabulce (spec. kap. 18).

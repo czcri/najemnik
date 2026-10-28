@@ -278,3 +278,10 @@ Změny proti pilotu:
 - **Zobrazení:** tabulka Měsíce, Platby (platby za vybraný měsíc), strana Hotovost (u „dopředu“ se v měsíci čeká platba za příští měsíc), detail („za říjen“ u platby), malý graf – vše podle „za měsíc“.
 - **Statistiky:** graf příjmů podle data přijetí (peníze, účetnictví); úspěšnost výběru podle „za měsíc“. Nová volba období **Měsíc** s listováním ‹ ›.
 - **Import:** měsíc se rozpozná ze zprávy pro příjemce („nájem 10/2026“, „10.2026“, „říjen“, „za října“…); jinak podle pravidla nájemníka.
+
+## 18. Úprava nájmu pro konkrétní měsíc – sleva (2026-10-29, verze 2.5)
+
+- **Detail nájemníka → záložka Měsíce → klepnutí na měsíc** (nebo na částku „Měl“) otevře „<měsíc> – měl zaplatit“: standardní nájem, **nájem za tento měsíc** (jiná dohodnutá částka, i 0), **důvod**, volitelně **„platí i pro další měsíce do“**, výdaje v měsíci (+ přidat), **„Vrátit standardní nájem“**.
+- V tabulce je upravený měsíc zvýrazněn a pod částkou je důvod. Tabulka má navíc **příští měsíc** (šedě, „budoucí“), aby šla sleva domluvit dopředu.
+- Data: `najemnik.upravy = [{ mesic, castka, duvod }]`; standardní nájem (předpis) i „Změnit nájem“ (trvalá změna) zůstávají beze změny.
+- Upravená částka se promítne do dluhu, předvyplněné platby, seznamu Hotovost, upomínek ({najem}) a statistik.

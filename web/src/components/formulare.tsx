@@ -2,8 +2,8 @@
 import { useState, type FormEvent } from 'react';
 import { Banknote, Landmark, Plus, Trash2 } from 'lucide-react';
 import { useData } from '../data/store';
-import { aktualniNajem, castkaPredpisu, mesicZData, navrhPlatby, normalizujUcet, obdobiPlatby, parseCastka, zmenNajem } from '../lib/core';
-import { datumCz, kc, nazevMesice, noveId, odMesice, posunMesic } from '../lib/format';
+import { aktualniNajem, castkaPredpisu, mesicZData, nastavUpravu, navrhPlatby, normalizujUcet, obdobiPlatby, parseCastka, standardniNajem, upravaVMesici, zmenNajem } from '../lib/core';
+import { NazevMesice, datumCz, kc, nazevMesice, noveId, odMesice, posunMesic } from '../lib/format';
 import { Chyba, NapovedaCastky, Panel, Pole, Prepinac, Tlacitko, VSTUP, VolbaMesice, useToast } from './ui';
 import type { Najemnik, Platba, Vydaj, Zpusob } from '../types';
 import { usePamet } from '../lib/pamet';
@@ -87,12 +87,12 @@ export function FormPlatba({ najemnik, platba, onClose }: { najemnik: Najemnik; 
   );
 }
 
-export function FormVydaj({ najemnik, vydaj, onClose }: { najemnik: Najemnik; vydaj?: Vydaj; onClose: () => void }) {
+export function FormVydaj({ najemnik, vydaj, datumVychozi, onClose }: { najemnik: Najemnik; vydaj?: Vydaj; datumVychozi?: string; onClose: () => void }) {
   const { akce, dnes, data } = useData();
   const toast = useToast();
   const prvni = !data.vydaje.some(v => v.najemnikId === najemnik.id) && !data.platby.some(p => p.najemnikId === najemnik.id);
   const k = `vydaj:${najemnik.id}:${vydaj?.id ?? 'novy'}`;
-  const [datum, setDatum] = usePamet(`${k}:datum`, vydaj?.datum ?? dnes);
+  const [datum, setDatum] = usePamet(`${k}:datum`, vydaj?.datum ?? datumVychozi ?? dnes);
   const [popis, setPopis] = usePamet(`${k}:popis`, vydaj?.popis ?? (prvni ? 'Počáteční dluh' : ''));
   const [castka, setCastka] = usePamet(`${k}:castka`, vydaj ? String(vydaj.castka) : '');
   const [chyba, setChyba] = useState<string | null>(null);
@@ -287,6 +287,63 @@ export function FormNajemnik({ najemnik, onClose, onUlozeno }: { najemnik?: Naje
         <Chyba text={chyba} />
         <Tlacitko type="submit">Uložit</Tlacitko>
         {najemnik && <Tlacitko typ="nebezpecne" onClick={smaz}><Trash2 className="size-5" />Smazat nájemníka</Tlacitko>}
+      </form>
+    </Panel>
+  );
+}
+
+// Úprava „měl zaplatit“ pro jeden měsíc: jiná částka nájmu (sleva) s důvodem, volitelně až do měsíce.
+export function PanelMesice({ najemnik, mesic, onClose, onVydaj }: { najemnik: Najemnik; mesic: string; onClose: () => void; onVydaj: (datum: string) => void }) {
+  const { akce, dnes, data } = useData();
+  const toast = useToast();
+  const standard = standardniNajem(najemnik, mesic);
+  const uprava = upravaVMesici(najemnik, mesic);
+  const k = `mesic:${najemnik.id}:${mesic}`;
+  const [castka, setCastka] = usePamet(`${k}:castka`, String(uprava?.castka ?? standard));
+  const [duvod, setDuvod] = usePamet(`${k}:duvod`, uprava?.duvod ?? '');
+  const [doMesice, setDoMesice] = usePamet(`${k}:do`, '');
+  const [chyba, setChyba] = useState<string | null>(null);
+  const vydaje = data.vydaje.filter(v => v.najemnikId === najemnik.id && mesicZData(v.datum) === mesic);
+
+  async function uloz(e: FormEvent) {
+    e.preventDefault();
+    const c = castka.trim() === '0' ? 0 : parseCastka(castka);
+    if (c === null) return setChyba('Částka musí být celé číslo v korunách (0 = tento měsíc se neplatí).');
+    if (doMesice && doMesice < mesic) return setChyba('„Platí do“ je před vybraným měsícem.');
+    await akce.ulozNajemnika({ ...najemnik, upravy: nastavUpravu(najemnik, mesic, doMesice || null, c, duvod.trim()) });
+    toast(c === standard ? 'Vrácen standardní nájem' : 'Nájem pro měsíc upraven');
+    onClose();
+  }
+  async function vratit() {
+    await akce.ulozNajemnika({ ...najemnik, upravy: nastavUpravu(najemnik, mesic, null, null) });
+    toast('Vrácen standardní nájem');
+    onClose();
+  }
+
+  return (
+    <Panel title={`${NazevMesice(mesic)} – měl zaplatit`} onClose={onClose}>
+      <form onSubmit={uloz} className="space-y-4">
+        <p className="text-sm text-muted-foreground">Standardní nájem v tomto měsíci: <b className="text-foreground">{kc(standard)}</b>{mesic > mesicZData(dnes) ? ' · budoucí měsíc' : ''}</p>
+        <Pole label="Nájem za tento měsíc (Kč)" napoveda="Dohodnutá částka jen pro tento měsíc, např. sleva. Standardní nájem se nemění.">
+          <div className="flex h-16 items-center rounded-2xl border border-border bg-card px-4 focus-within:border-primary">
+            <input inputMode="numeric" value={castka} onChange={e => setCastka(e.target.value)} className="min-w-0 flex-1 bg-transparent text-[28px] font-extrabold tabular outline-none" />
+            <span className="text-lg font-bold text-muted-foreground">Kč</span>
+          </div>
+        </Pole>
+        <Pole label="Důvod"><input value={duvod} onChange={e => setDuvod(e.target.value)} maxLength={120} placeholder="např. sleva – oprava topení" className={VSTUP} /></Pole>
+        <Pole label="Platí i pro další měsíce do" napoveda="Nepovinné – vyplňte, když je úprava na víc měsíců.">
+          <input type="month" value={doMesice} min={mesic} onChange={e => setDoMesice(e.target.value)} className={VSTUP} />
+        </Pole>
+        <Chyba text={chyba} />
+        <Tlacitko type="submit">Uložit</Tlacitko>
+        {uprava && <Tlacitko typ="vedlejsi" onClick={vratit}>Vrátit standardní nájem ({kc(standard)})</Tlacitko>}
+        <div>
+          <p className="mb-2 px-1 text-sm font-bold text-muted-foreground">Výdaje v tomto měsíci</p>
+          <div className="card-soft-2 divide-y divide-border overflow-hidden">
+            {vydaje.map(v => <div key={v.id} className="flex justify-between px-4 py-3 text-sm"><span>{v.popis}</span><b className="tabular">{kc(v.castka)}</b></div>)}
+            <button type="button" onClick={() => onVydaj(mesic === mesicZData(dnes) ? dnes : `${mesic}-01`)} className="flex w-full items-center gap-2 px-4 py-3 text-sm font-bold text-primary"><Plus className="size-4" />Přidat výdaj / dluh</button>
+          </div>
+        </div>
       </form>
     </Panel>
   );

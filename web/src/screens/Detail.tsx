@@ -3,15 +3,15 @@ import { Navigate, useParams } from 'react-router-dom';
 import { Bar, ComposedChart, ReferenceArea, ResponsiveContainer, Scatter, Tooltip, XAxis } from 'recharts';
 import { Mail, MessageSquare, Pencil, Phone, Plus, Receipt, RefreshCw } from 'lucide-react';
 import { AppShell, Card, Main, STAV_TEXT, ZpusobIkona } from '../components/ui';
-import { FormNajem, FormNajemnik, FormPlatba, FormVydaj } from '../components/formulare';
+import { FormNajem, FormNajemnik, FormPlatba, FormVydaj, PanelMesice } from '../components/formulare';
 import { PanelUpominky } from '../components/upominka';
 import { useData } from '../data/store';
-import { aktualniNajem, mesicZData, obdobiPlatby, zpusobPlatby } from '../lib/core';
+import { aktualniNajem, dalsiMesic, mesicZData, najemVMesici, obdobiPlatby, upravaVMesici, zpusobPlatby } from '../lib/core';
 import { NazevMesice, datumCz, kc, kratkyMesic, nazevMesice, odMesice } from '../lib/format';
 import type { Najemnik, Platba, Vydaj } from '../types';
 import { usePamet } from '../lib/pamet';
 
-type Okno = { typ: 'platba'; platba?: Platba } | { typ: 'vydaj'; vydaj?: Vydaj } | { typ: 'najem' } | { typ: 'upravit' } | { typ: 'zprava' } | null;
+type Okno = { typ: 'platba'; platba?: Platba } | { typ: 'vydaj'; vydaj?: Vydaj; datum?: string } | { typ: 'mesic'; mesic: string } | { typ: 'najem' } | { typ: 'upravit' } | { typ: 'zprava' } | null;
 
 const BANKY: Record<string, string> = { fio: 'Fio', cs: 'ČS', kb: 'KB' };
 export function ZdrojStitek({ p }: { p: Platba }) {
@@ -81,6 +81,11 @@ export default function Detail() {
   const mesic = mesicZData(dnes);
   const tento = s.radky.find(r => r.mesic === mesic);
   const zaplacenoTentoMesic = tento ? tento.mel - tento.chybi : 0;
+  // Příští měsíc v tabulce (budoucí) – aby šla úprava nájmu domluvit dopředu.
+  const pristiMesic = dalsiMesic(mesic);
+  const pristi = n.zacatek <= pristiMesic && (!n.konec || n.konec >= pristiMesic)
+    ? { mesic: pristiMesic, najem: najemVMesici(n, pristiMesic), uprava: upravaVMesici(n, pristiMesic), zaplatil: s.budouci?.[pristiMesic] ?? 0 }
+    : null;
   const posledniUpominka = data.upominky.filter(u => u.najemnikId === n.id).sort((a, b) => b.datum.localeCompare(a.datum))[0];
 
   const [hlavni, barva] = s.stav === 'dluh' ? [`Dluží ${kc(s.dluh)}`, STAV_TEXT.dluh]
@@ -156,20 +161,32 @@ export default function Detail() {
               <div className="grid grid-cols-[1.3fr_1fr_1fr_1fr] gap-2 px-4 py-2 text-[11px] font-bold text-muted-foreground">
                 <span>Měsíc</span><span className="text-right">Měl</span><span className="text-right">Zaplatil</span><span className="text-right">Dluh kum.</span>
               </div>
+              {pristi && (
+                <button onClick={() => setOkno({ typ: 'mesic', mesic: pristi.mesic })}
+                  className="grid w-full grid-cols-[1.3fr_1fr_1fr_1fr] items-center gap-2 border-l-4 border-l-border px-4 py-2.5 text-left text-[13px] text-muted-foreground tabular active:bg-muted">
+                  <span><span className="block font-semibold">{NazevMesice(pristi.mesic).split(' ')[0]} {pristi.mesic.slice(2, 4)}</span><span className="block text-[11px]">budoucí</span></span>
+                  <span className="text-right"><span className={`underline decoration-dotted underline-offset-4 ${pristi.uprava ? 'font-bold text-status-over' : ''}`}>{kc(pristi.najem)}</span>{pristi.uprava && <span className="block truncate text-[10px] font-semibold text-status-over">{pristi.uprava.duvod || 'upraveno'}</span>}</span>
+                  <span className="text-right">{pristi.zaplatil ? kc(pristi.zaplatil) : '—'}</span><span />
+                </button>
+              )}
               {[...s.radky].reverse().map(r => (
-                <div key={r.mesic} className={`grid grid-cols-[1.3fr_1fr_1fr_1fr] items-center gap-2 border-l-4 px-4 py-2.5 text-[13px] tabular ${r.stav === 'dluh' ? 'border-l-status-debt' : r.stav === 'bezi' ? 'border-l-status-due' : 'border-l-status-ok'}`}>
+                <button key={r.mesic} onClick={() => setOkno({ typ: 'mesic', mesic: r.mesic })}
+                  className={`grid w-full grid-cols-[1.3fr_1fr_1fr_1fr] items-center gap-2 border-l-4 px-4 py-2.5 text-left text-[13px] tabular active:bg-muted ${r.stav === 'dluh' ? 'border-l-status-debt' : r.stav === 'bezi' ? 'border-l-status-due' : 'border-l-status-ok'}`}>
                   <span>
                     <span className="block font-semibold">{NazevMesice(r.mesic).split(' ')[0]} {r.mesic.slice(2, 4)}</span>
                     <span className={`block text-[11px] ${STAV_TEXT[r.stav]}`}>{r.chybi ? `chybí ${kc(r.chybi)}` : '✓'}{r.vydaj ? ` · výdaj ${kc(r.vydaj)}` : ''}</span>
                   </span>
-                  <span className="text-right">{kc(r.mel)}</span>
+                  <span className="text-right">
+                    <span className={`underline decoration-dotted underline-offset-4 ${r.uprava ? 'font-bold text-status-over' : ''}`}>{kc(r.mel)}</span>
+                    {r.uprava && <span className="block truncate text-[10px] font-semibold text-status-over" title={r.uprava.duvod}>{r.uprava.duvod || 'upraveno'}</span>}
+                  </span>
                   <span className="text-right">{kc(r.zaplatil)}</span>
                   <span className={`text-right font-bold ${r.prubeznyRozdil > 0 ? 'text-status-debt' : r.prubeznyRozdil < 0 ? 'text-status-over' : 'text-status-ok'}`}>{kc(r.prubeznyRozdil)}</span>
-                </div>
+                </button>
               ))}
               {s.radky.length === 0 && <p className="p-6 text-center text-sm text-muted-foreground">Nájem začne od {odMesice(n.zacatek)}.</p>}
             </Card>
-            <p className="mt-2 px-2 text-xs text-muted-foreground">Zaplatil = platby za daný měsíc. Co v měsíci přebývá, doplní nejstarší nezaplacené měsíce. Dluh kum. = kolik k tomu měsíci celkem chybělo (záporný = přeplatek).</p>
+            <p className="mt-2 px-2 text-xs text-muted-foreground">Klepnutím na měsíc upravíte, kolik měl zaplatit (např. dohodnutá sleva). Zaplatil = platby za daný měsíc. Co v měsíci přebývá, doplní nejstarší nezaplacené měsíce. Dluh kum. = kolik k tomu měsíci celkem chybělo (záporný = přeplatek).</p>
           </>
         )}
 
@@ -188,7 +205,8 @@ export default function Detail() {
       </Main>
 
       {okno?.typ === 'platba' && <FormPlatba najemnik={n} platba={okno.platba} onClose={() => setOkno(null)} />}
-      {okno?.typ === 'vydaj' && <FormVydaj najemnik={n} vydaj={okno.vydaj} onClose={() => setOkno(null)} />}
+      {okno?.typ === 'vydaj' && <FormVydaj najemnik={n} vydaj={okno.vydaj} datumVychozi={okno.datum} onClose={() => setOkno(null)} />}
+      {okno?.typ === 'mesic' && <PanelMesice najemnik={n} mesic={okno.mesic} onClose={() => setOkno(null)} onVydaj={datum => setOkno({ typ: 'vydaj', datum })} />}
       {okno?.typ === 'najem' && <FormNajem najemnik={n} onClose={() => setOkno(null)} />}
       {okno?.typ === 'upravit' && <FormNajemnik najemnik={n} onClose={() => setOkno(null)} />}
       {okno?.typ === 'zprava' && <PanelUpominky najemnik={n} onClose={() => setOkno(null)} />}

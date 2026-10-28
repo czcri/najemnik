@@ -1,5 +1,5 @@
 // Upomínky: doplnění šablon a odkazy na SMS / WhatsApp / e-mail.
-import { aktualniNajem, mesicZData } from './core';
+import { mesicZData, najemVMesici } from './core';
 import { datumCz, kc, nazevMesice, posunDny } from './format';
 import type { Kanal, Najemnik, Nastaveni } from '../types';
 
@@ -21,7 +21,7 @@ export function doplnSablonu(text: string, n: Najemnik, s: { dluh: number; tento
     dluh: kc(s.dluh + s.tentoMesic),
     tento_mesic: kc(s.tentoMesic),
     mesic: nazevMesice(mesicZData(dnes)),
-    najem: kc(aktualniNajem(n, dnes)),
+    najem: kc(najemVMesici(n, mesicZData(dnes))),
     nemovitost: n.oznaceni,
     ucet: n.ucetProPlatby || nastaveni.ucty[0]?.ucet || '—',
     vs: n.vs || '—',

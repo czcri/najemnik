@@ -22,7 +22,10 @@ export type Najemnik = {
   uctyPlatce?: string[]; // účty, ze kterých platí
   ucetProPlatby?: string; // můj účet, kam platí
   poznamkaDluh?: { text: string; datum: string };
+  upravy?: UpravaNajmu[]; // jiná částka nájmu pro konkrétní měsíce (dohodnutá sleva apod.)
 };
+
+export type UpravaNajmu = { mesic: string; castka: number; duvod?: string };
 
 export type ZdrojPlatby =
   | { typ: 'hotove' }

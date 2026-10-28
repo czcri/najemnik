@@ -2,7 +2,7 @@
 // Počítá s platbami „za“ měsíc, který se v aktuálním měsíci platí (u „platí dopředu“ za příští),
 // vůči předpisu toho měsíce (nájem + výdaje);
 // starší dluh se tu neřeší (je v Dlužnících). Nový měsíc tak začíná s plným seznamem sám od sebe.
-import { stavNajemnika, mesicZData, obdobiPlatby, dalsiMesic, predpisVMesici, castkaPredpisu } from './logika.js';
+import { stavNajemnika, mesicZData, obdobiPlatby, dalsiMesic, najemVMesici } from './logika.js';
 
 const pad = n => String(n).padStart(2, '0');
 const dnuVMesici = mesic => { const [r, m] = mesic.split('-').map(Number); return new Date(Date.UTC(r, m, 0)).getUTCDate(); };
@@ -22,8 +22,7 @@ export function seznamMesice(najemnici, platby, vydaje, dnes, zpusob) {
     const zaMesic = n.platiDopredu ? dalsiMesic(mesic) : mesic;
     if (zaMesic < n.zacatek || (n.konec && n.konec < zaMesic)) continue; // nájem ještě nezačal / už skončil
     const radek = stavNajemnika(n, vlastni, dnes, vydaje.filter(v => v.najemnikId === n.id)).radky.find(r => r.mesic === zaMesic);
-    const predpis = predpisVMesici(n, zaMesic);
-    const mel = radek ? radek.mel : predpis ? castkaPredpisu(predpis) : 0;
+    const mel = radek ? radek.mel : najemVMesici(n, zaMesic);
     if (mel <= 0) continue;
     const zaplaceno = vlastni.filter(p => obdobiPlatby(p, n) === zaMesic).reduce((s, p) => s + p.castka, 0);
     const chybi = Math.max(0, mel - zaplaceno);
