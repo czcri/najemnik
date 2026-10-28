@@ -114,7 +114,8 @@ try {
       tx.objectStore('platby').put({ id: 'pp', najemnikId: 'pilot', datum: '2026-09-03', castka: 8000 });
       tx.oncomplete = () { r.result.close(); ok(); }; }; r.onerror = () => chyba(r.error); })`.replace('tx.oncomplete = () {', 'tx.oncomplete = () => {'));
   await cdp('Page.navigate', { url: URL_APP });
-  await pockej(500);
+  // počkat, až se úvodní obrazovka vykreslí (pomalejší start nesmí shodit test)
+  for (let i = 0; i < 20 && !(await js(`!!document.querySelector('[aria-label="Úvodní obrazovka"]')`)); i++) await pockej(100);
   let t = await text();
   over(t.toLowerCase().includes('vytvořilo') && await js(`!!document.querySelector('[aria-label="Úvodní obrazovka"]')`), 'úvodní obrazovka s „Vytvořilo“ a logem');
   await pockej(300);
