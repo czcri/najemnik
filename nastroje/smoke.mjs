@@ -178,7 +178,7 @@ try {
   await snimek('prehled');
   await klik('O aplikaci');
   t = await text();
-  over(t.includes('verze 2.2.1') && t.toLowerCase().includes('vytvořilo'), 'panel O aplikaci z loga v záhlaví');
+  over(t.includes('verze 2.3') && t.toLowerCase().includes('vytvořilo'), 'panel O aplikaci z loga v záhlaví');
   await snimek('o-aplikaci', false);
   await klik('Zavřít');
   await jdi('#/dluznici');
@@ -192,6 +192,15 @@ try {
   await klik('Zavřít');
   await jdi('#/platby');
   await snimek('platby');
+  await klik('Předchozí měsíc');
+  t = await text();
+  over(t.includes('Září 2026') && t.includes('Zpět na aktuální měsíc') && t.includes('Dosud nezaplaceno'), 'platby: přepnutí na předchozí měsíc', t.slice(0, 400));
+  await js(`(() => { const el = document.querySelector('input[type=month]'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(el, '2026-08'); el.dispatchEvent(new Event('input', { bubbles: true })); })()`);
+  await pockej(200);
+  over((await text()).includes('Srpen 2026'), 'platby: výběr měsíce a roku');
+  over(await js(`document.querySelector('[aria-label="Další měsíc"]').disabled === false && document.querySelector('[aria-label="Předchozí měsíc"]').disabled === true`), 'platby: nelze před začátek prvního nájmu');
+  await klik('Zpět na aktuální měsíc');
+  over((await text()).includes('Říjen 2026'), 'platby: zpět na aktuální měsíc');
   await jdi('#/statistiky');
   await pockej(800);
   t = await text();

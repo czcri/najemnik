@@ -56,3 +56,7 @@ Odloženo: widget na plochu + skutečné notifikace (nativní obal Capacitor/APK
 - 2.1.2: hlavní karta začíná stranou Hotovost.
 - 2.1.3: nová verze se v telefonu projeví hned (index.html bez HTTP cache, reload po převzetí řízení novým SW); návrat z pozadí → strana Hotovost.
 - 2.2: logo Simply Software – úvodní obrazovka „Vytvořilo“, symbol v záhlaví → O aplikaci, patička Nastavení (spec. kap. 14).
+
+## 2026-10-28 – verze 2.3
+
+- Platby: výběr měsíce a roku (šipky ‹ › a klepnutí na měsíc = výběr měsíce/roku), od začátku prvního nájmu po aktuální měsíc; „Zpět na aktuální měsíc“.
