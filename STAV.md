@@ -74,3 +74,7 @@ Odloženo: widget na plochu + skutečné notifikace (nativní obal Capacitor/APK
 - Platba „za měsíc“ + nájemník „platí dopředu“; výpočty, Platby, Hotovost, detail a import podle měsíce, za který platba je (spec. kap. 17).
 - Statistiky: období Měsíc s listováním.
 - Testy: 57 core + kouřový test.
+
+## 2026-10-29 – verze 2.4.1
+
+- SMS: částky s obyčejnými mezerami (pevná mezera dorazila jako „?“), pro SMS i obyčejné pomlčky/uvozovky.

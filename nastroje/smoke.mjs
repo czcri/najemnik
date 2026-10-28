@@ -199,7 +199,7 @@ try {
   await snimek('prehled');
   await klik('O aplikaci');
   t = await text();
-  over(t.includes('verze 2.4') && t.toLowerCase().includes('vytvořilo'), 'panel O aplikaci z loga v záhlaví');
+  over(t.includes('verze 2.4.1') && t.toLowerCase().includes('vytvořilo'), 'panel O aplikaci z loga v záhlaví');
   await snimek('o-aplikaci', false);
   await klik('Zavřít');
   await jdi('#/dluznici');
@@ -209,6 +209,8 @@ try {
   t = await text();
   const zprava = await js('document.querySelector("textarea")?.value ?? ""');
   over(t.includes('Upomínka po splatnosti') && zprava.startsWith('Dobrý den Jan Testovací') && zprava.includes('VS 1001'), 'upomínka: šablona doplněná o jméno a VS', zprava);
+  const sms = await js(`decodeURIComponent([...document.querySelectorAll('a')].find(a => a.href.startsWith('sms:'))?.href.split('body=')[1] ?? '')`);
+  over(!/[  –„“]/.test(zprava + sms) && /\d \d{3} Kč/.test(sms), 'upomínka: v SMS obyčejné mezery v částce (žádné „?“)', JSON.stringify(sms));
   await snimek('upominka');
   await klik('Zavřít');
   await jdi('#/platby');
