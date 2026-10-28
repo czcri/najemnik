@@ -2,9 +2,9 @@
 import { useState, type FormEvent } from 'react';
 import { Banknote, Landmark, Plus, Trash2 } from 'lucide-react';
 import { useData } from '../data/store';
-import { aktualniNajem, castkaPredpisu, mesicZData, normalizujUcet, parseCastka, zmenNajem } from '../lib/core';
-import { datumCz, kc, noveId, odMesice } from '../lib/format';
-import { Chyba, Panel, Pole, Prepinac, Tlacitko, VSTUP, useToast } from './ui';
+import { aktualniNajem, castkaPredpisu, mesicZData, navrhPlatby, normalizujUcet, parseCastka, zmenNajem } from '../lib/core';
+import { datumCz, kc, nazevMesice, noveId, odMesice } from '../lib/format';
+import { Chyba, NapovedaCastky, Panel, Pole, Prepinac, Tlacitko, VSTUP, useToast } from './ui';
 import type { Najemnik, Platba, Vydaj, Zpusob } from '../types';
 import { usePamet } from '../lib/pamet';
 
@@ -19,10 +19,11 @@ export function vysledekPoPlatbe(s: { dluh: number; tentoMesic: number; preplate
 }
 
 export function FormPlatba({ najemnik, platba, onClose }: { najemnik: Najemnik; platba?: Platba; onClose: () => void }) {
-  const { akce, dnes, stav } = useData();
+  const { akce, dnes, data } = useData();
   const toast = useToast();
-  const s = stav(najemnik.id);
-  const predvyplneno = Math.max(aktualniNajem(najemnik, dnes), s.dluh + s.tentoMesic) || aktualniNajem(najemnik, dnes);
+  // Nová platba: pravidelný nájem, nebo doplatek, když už v tomto měsíci část přišla.
+  const navrh = navrhPlatby(najemnik, data.platby.filter(p => p.najemnikId === najemnik.id), dnes, data.vydaje.filter(v => v.najemnikId === najemnik.id));
+  const predvyplneno = navrh.castka;
   const k = `platba:${najemnik.id}:${platba?.id ?? 'nova'}`;
   const [datum, setDatum] = usePamet(`${k}:datum`, platba?.datum ?? dnes);
   const [castka, setCastka] = usePamet(`${k}:castka`, String(platba?.castka ?? predvyplneno));
@@ -60,6 +61,7 @@ export function FormPlatba({ najemnik, platba, onClose }: { najemnik: Najemnik; 
               className="min-w-0 flex-1 bg-transparent text-[28px] font-extrabold tabular outline-none" />
             <span className="text-lg font-bold text-muted-foreground">Kč</span>
           </div>
+          {!platba && <NapovedaCastky navrh={navrh} mesic={nazevMesice(mesicZData(dnes)).split(' ')[0]} />}
         </Pole>
         <Pole label="Datum"><input type="date" value={datum} onChange={e => setDatum(e.target.value)} className={VSTUP} /></Pole>
         {zVypisu

@@ -16,6 +16,8 @@ export const stavNajemnika = logika.stavNajemnika as unknown as (n: Najemnik, p:
 type Souhrn = { radky: (import('../data/store').StavNajemnika & { najemnik: Najemnik })[]; dluhCelkem: number; dluzniku: number; tentoMesicCelkem: number };
 export const souhrn = logika.souhrn as unknown as (n: Najemnik[], p: Platba[], dnes: string, v?: Vydaj[]) => Souhrn;
 export const jeUkonceny = logika.jeUkonceny as unknown as (n: Najemnik, dnes: string) => boolean;
+export type NavrhPlatby = { castka: number; doplatek: boolean; zaplaceno: number; mel: number };
+export const navrhPlatby = logika.navrhPlatby as unknown as (n: Najemnik, p: Platba[], dnes: string, v?: Vydaj[]) => NavrhPlatby;
 export const mesicZData = logika.mesicZData as (d: string) => string;
 export const vytvorZalohu = logika.vytvorZalohu as unknown as (d: Data, cas: string) => object;
 export const nactiZalohu = logika.nactiZalohu as unknown as (text: string) => Omit<Data, 'nastaveni'> & { nastaveni: Partial<Data['nastaveni']> };

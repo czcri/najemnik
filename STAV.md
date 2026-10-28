@@ -64,3 +64,7 @@ Odloženo: widget na plochu + skutečné notifikace (nativní obal Capacitor/APK
 ## 2026-10-28 – verze 2.3.1
 
 - Rozpracované formuláře se obnoví po přepnutí do jiné aplikace / ukončení Androidem (spec. kap. 15); automatický reload po aktualizaci jen hned po spuštění.
+
+## 2026-10-28 – verze 2.3.2
+
+- Předvyplněná částka platby: pravidelný nájem, nebo doplatek měsíce (spec. kap. 16).

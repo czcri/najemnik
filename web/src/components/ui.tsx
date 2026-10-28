@@ -155,6 +155,14 @@ export function Tlacitko({ children, onClick, typ = 'hlavni', type = 'button', d
   );
 }
 
+// Nápověda pod částkou: odkud se vzala předvyplněná částka.
+export const NapovedaCastky = ({ navrh, mesic }: { navrh: { doplatek: boolean; zaplaceno: number; mel: number }; mesic: string }) =>
+  <span className="mt-1 block px-1 text-xs text-muted-foreground">
+    {navrh.doplatek
+      ? <>Předvyplněn <b className="text-status-due">doplatek za {mesic}</b> – zaplaceno už {kc(navrh.zaplaceno)} z {kc(navrh.mel)}.</>
+      : <>Předvyplněn pravidelný měsíční nájem.</>}
+  </span>;
+
 export const Chyba = ({ text }: { text: string | null }) =>
   text ? <p className="rounded-2xl bg-status-debt-soft px-4 py-3 text-sm font-semibold text-status-debt">{text}</p> : null;
 

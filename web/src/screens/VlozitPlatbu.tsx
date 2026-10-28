@@ -1,11 +1,11 @@
 import { useMemo, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { Banknote, CheckCircle2, Landmark, Search } from 'lucide-react';
-import { AppShell, Chyba, Main, Pole, Prepinac, Tlacitko, VSTUP, ZpusobIkona, useToast } from '../components/ui';
+import { AppShell, Chyba, Main, NapovedaCastky, Pole, Prepinac, Tlacitko, VSTUP, ZpusobIkona, useToast } from '../components/ui';
 import { vysledekPoPlatbe } from '../components/formulare';
 import { useData } from '../data/store';
-import { aktualniNajem, parseCastka, stavNajemnika } from '../lib/core';
-import { kc, noveId } from '../lib/format';
+import { aktualniNajem, mesicZData, navrhPlatby, parseCastka, stavNajemnika } from '../lib/core';
+import { kc, nazevMesice, noveId } from '../lib/format';
 import { usePamet } from '../lib/pamet';
 
 const bezDiakritiky = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
@@ -17,7 +17,9 @@ export default function VlozitPlatbu() {
   const [id, setId] = usePamet('vlozit:id', aktivni.find(r => r.dluh + r.tentoMesic > 0)?.najemnik.id ?? aktivni[0]?.najemnik.id ?? '');
   const [hledat, setHledat] = useState('');
   const r = prehled.find(x => x.najemnik.id === id);
-  const navrh = (x = r) => x ? String(Math.max(x.najem, x.dluh + x.tentoMesic) || x.najem) : '';
+  // Pravidelný nájem, nebo doplatek, když už v tomto měsíci část přišla.
+  const navrhPro = (x = r) => x ? navrhPlatby(x.najemnik, data.platby.filter(p => p.najemnikId === x.najemnik.id), dnes, data.vydaje.filter(v => v.najemnikId === x.najemnik.id)) : null;
+  const navrh = (x = r) => String(navrhPro(x)?.castka ?? '');
   const [castka, setCastka] = usePamet('vlozit:castka', navrh());
   const [zpusob, setZpusob] = usePamet<'prevod' | 'hotove'>('vlozit:zpusob', r?.najemnik.zpusobPlaceni === 'hotove' ? 'hotove' : 'prevod');
   const [datum, setDatum] = usePamet('vlozit:datum', dnes);
@@ -103,6 +105,7 @@ export default function VlozitPlatbu() {
               <input inputMode="numeric" value={castka} onChange={e => setCastka(e.target.value)} className="min-w-0 flex-1 bg-transparent text-[34px] font-extrabold tabular outline-none" />
               <span className="text-xl font-bold text-muted-foreground">Kč</span>
             </div>
+            {r && <NapovedaCastky navrh={navrhPro()!} mesic={nazevMesice(mesicZData(dnes)).split(' ')[0]} />}
           </Pole>
           <Pole label="Způsob platby">
             <Prepinac hodnota={zpusob} onChange={setZpusob} volby={[{ k: 'prevod', l: 'Převodem', i: Landmark }, { k: 'hotove', l: 'Hotově', i: Banknote }]} />

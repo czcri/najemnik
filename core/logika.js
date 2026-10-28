@@ -91,6 +91,19 @@ export function stavNajemnika(najemnik, platby, dnes, vydaje = []) {
   return { mel, zaplatil, dluh, tentoMesic, preplatek, stav, radky };
 }
 
+// Předvyplněná částka nové platby: pravidelný měsíční nájem; jen když už v aktuálním měsíci
+// část přišla (platby s datem v tomto měsíci), doplatek do celého předpisu měsíce (nájem + výdaje).
+// platby a vydaje = jen tohoto nájemníka.
+export function navrhPlatby(najemnik, platby, dnes, vydaje = []) {
+  const najem = aktualniNajem(najemnik, dnes);
+  const mesic = mesicZData(dnes);
+  const radek = stavNajemnika(najemnik, platby, dnes, vydaje).radky.find(r => r.mesic === mesic);
+  const zaplaceno = platby.filter(p => mesicZData(p.datum) === mesic).reduce((s, p) => s + p.castka, 0);
+  const chybi = radek ? radek.mel - zaplaceno : 0;
+  if (zaplaceno > 0 && chybi > 0) return { castka: chybi, doplatek: true, zaplaceno, mel: radek.mel };
+  return { castka: najem, doplatek: false, zaplaceno, mel: radek?.mel ?? najem };
+}
+
 export const jeUkonceny = (najemnik, dnes) => !!najemnik.konec && najemnik.konec < mesicZData(dnes);
 
 const PORADI = { dluh: 0, bezi: 1, preplatek: 2, ok: 3 };

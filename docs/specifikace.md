@@ -259,3 +259,11 @@ Změny proti pilotu:
 - Když Android aplikaci na pozadí ukončí (např. při hledání čísla v kontaktech), po návratu se otevře stejná obrazovka a formulář s vyplněnými údaji; krátká hláška „Pokračujete v rozpracovaném zápisu“, úvodní obrazovka se v tom případě přeskočí.
 - Zavřením formuláře, uložením nebo odchodem z obrazovky se koncept smaže.
 - Automatické načtení nové verze aplikace jen do 8 s po spuštění (dříve kdykoli → mohlo přerušit rozpracovaný zápis); jinak se nová verze projeví při dalším spuštění.
+
+## 16. Předvyplněná částka nové platby (2026-10-28, verze 2.3.2)
+
+- Výchozí částka = **pravidelný měsíční nájem**.
+- Výjimka: pokud v aktuálním měsíci už část přišla (platby s datem v tomto měsíci) a měsíc není celý zaplacený → **doplatek** do předpisu měsíce (nájem + výdaje tohoto měsíce).
+- Dluh z minulých měsíců se do předvyplněné částky nezapočítává (dříve ano).
+- Pod částkou nápověda „Předvyplněn pravidelný měsíční nájem“ / „Předvyplněn doplatek za … – zaplaceno už X z Y“.
+- Platí pro platbu v detailu nájemníka i „Vložit platbu“; logika `navrhPlatby` v `core/logika.js` (testováno).

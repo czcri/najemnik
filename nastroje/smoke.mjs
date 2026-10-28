@@ -179,6 +179,8 @@ try {
 
   // 5) Vložit platbu – výsledek po uložení
   await jdi('#/vlozit-platbu');
+  t = await text();
+  over(t.includes('Předvyplněn pravidelný měsíční nájem'), 'vložit platbu: předvyplněn pravidelný nájem (ne dluh)');
   await vypln({ 'Částka': '5000' });
   await klik('Převodem');
   await klik('Uložit platbu');
@@ -195,7 +197,7 @@ try {
   await snimek('prehled');
   await klik('O aplikaci');
   t = await text();
-  over(t.includes('verze 2.3.1') && t.toLowerCase().includes('vytvořilo'), 'panel O aplikaci z loga v záhlaví');
+  over(t.includes('verze 2.3.2') && t.toLowerCase().includes('vytvořilo'), 'panel O aplikaci z loga v záhlaví');
   await snimek('o-aplikaci', false);
   await klik('Zavřít');
   await jdi('#/dluznici');
@@ -271,6 +273,16 @@ try {
   const posun = await js(`(() => { const el = document.querySelector('.snap-x'); return [el.scrollLeft, el.clientWidth]; })()`);
   over(posun[0] < 2, 'karta zůstala na straně Hotovost (první strana)', JSON.stringify(posun));
   await snimek('karta-hotovost-castecne', false);
+  // Předvyplněná částka: po částečné platbě doplatek
+  const hanaId = await js(`(() => { const a = [...document.querySelectorAll('a')].find(x => x.innerText.includes('Hana Hotová')); return a ? a.hash.split('/').pop() : ''; })()`);
+  await jdi(`#/najemnici/${hanaId}`);
+  await klik('Platba');
+  const predvyplneno = await js(`[...document.querySelectorAll('label')].find(l => l.querySelector('span')?.innerText.trim() === 'Částka')?.querySelector('input')?.value ?? ''`);
+  t = await text();
+  over(predvyplneno === '5000' && t.includes('doplatek za říjen'), 'platba: po částečné platbě předvyplněn doplatek 5 000', predvyplneno);
+  await klik('Zavřít');
+  await jdi('#/');
+  await pockej(400);
   await klik('Ukázat Měsíc');
   await pockej(600);
   await js(`document.dispatchEvent(new Event('visibilitychange'))`); // návrat aplikace z pozadí

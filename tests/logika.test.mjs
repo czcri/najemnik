@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  stavNajemnika, souhrn, zmenNajem, aktualniNajem, potrebaZalohy, parseCastka,
+  stavNajemnika, souhrn, zmenNajem, aktualniNajem, potrebaZalohy, parseCastka, navrhPlatby,
   vytvorZalohu, nactiZalohu, rozsahMesicu,
 } from '../core/logika.js';
 
@@ -143,4 +143,19 @@ test('7: záloha tam a zpět, poškozená záloha se odmítne', () => {
   const spatna = JSON.parse(text);
   spatna.platby[0].najemnikId = 'neexistuje';
   assert.throws(() => nactiZalohu(JSON.stringify(spatna)), /poškozenou platbu/);
+});
+
+test('návrh částky platby: nájem, nebo doplatek v měsíci', () => {
+  const n = test1();
+  // nic nezaplaceno, i s dluhem z minulých měsíců → pravidelný nájem (ne dluh)
+  assert.deepEqual([navrhPlatby(n, [], DNES).castka, navrhPlatby(n, [], DNES).doplatek], [10000, false]);
+  // v říjnu už přišlo 4 000 → doplatek 6 000
+  const cast = navrhPlatby(n, [platba('p1', '2026-10-03', 4000)], DNES);
+  assert.deepEqual([cast.castka, cast.doplatek, cast.zaplaceno], [6000, true, 4000]);
+  // výdaj v měsíci se do doplatku počítá
+  assert.equal(navrhPlatby(n, [platba('p1', '2026-10-03', 4000)], DNES, [{ datum: '2026-10-02', castka: 500 }]).castka, 6500);
+  // říjen zaplacen celý → zase pravidelný nájem (např. platba dopředu)
+  assert.deepEqual([navrhPlatby(n, [platba('p1', '2026-10-03', 10000)], DNES).castka, navrhPlatby(n, [platba('p1', '2026-10-03', 10000)], DNES).doplatek], [10000, false]);
+  // platba ze září se do říjnového doplatku nepočítá
+  assert.equal(navrhPlatby(n, [platba('p1', '2026-09-20', 4000)], DNES).castka, 10000);
 });
