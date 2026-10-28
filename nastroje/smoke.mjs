@@ -120,7 +120,9 @@ try {
   await pockej(300);
   over(await js(`[...document.querySelectorAll('img[alt="Simply Software"]')].every(i => i.complete && i.naturalWidth > 0)`), 'logo Simply Software se načetlo');
   await snimek('uvod', false);
-  await pockej(1800);
+  await pockej(2000);
+  over(await js(`!!document.querySelector('[aria-label="Úvodní obrazovka"]')`), 'úvodní obrazovka je vidět ještě po 2,5 s');
+  await pockej(1300);
   over(!(await js(`!!document.querySelector('[aria-label="Úvodní obrazovka"]')`)), 'úvodní obrazovka sama zmizí');
   t = await text();
   over(t.includes('1 nájemník'), 'data z pilotu převzata (1 nájemník)', t.slice(0, 200));
@@ -176,7 +178,7 @@ try {
   await snimek('prehled');
   await klik('O aplikaci');
   t = await text();
-  over(t.includes('verze 2.2') && t.toLowerCase().includes('vytvořilo'), 'panel O aplikaci z loga v záhlaví');
+  over(t.includes('verze 2.2.1') && t.toLowerCase().includes('vytvořilo'), 'panel O aplikaci z loga v záhlaví');
   await snimek('o-aplikaci', false);
   await klik('Zavřít');
   await jdi('#/dluznici');

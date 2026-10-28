@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { LogoSimplySoftware } from './logo';
 
-const DELKA_MS = 1400;
+const DELKA_MS = 3000;
 let ukazano = false; // jen při spuštění, ne při přechodech mezi obrazovkami
 
 export function Uvod() {

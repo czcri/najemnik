@@ -247,7 +247,7 @@ Změny proti pilotu:
 
 ## 14. Logo autora aplikace (2026-10-28, verze 2.2)
 
-- **Úvodní obrazovka při každém spuštění** (~1,4 s, klepnutím přeskočit): ikona a název „Nájemník“, dole „Vytvořilo“ + logo Simply Software (symbol nad nápisem).
+- **Úvodní obrazovka při každém spuštění** (3 s, od 2.2.1; klepnutím přeskočit): ikona a název „Nájemník“, dole „Vytvořilo“ + logo Simply Software (symbol nad nápisem).
 - **Záhlaví přehledu:** vpravo symbol SS → panel „O aplikaci“ (verze, „Vytvořilo“ + logo).
 - **Nastavení dole:** verze + „Vytvořilo“ + logo (symbol vedle nápisu).
 - Ikona aplikace na ploše zůstává domek (logo patří k „Vytvořilo“).
