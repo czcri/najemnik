@@ -1,7 +1,8 @@
 import { useEffect } from 'react';
 import { HashRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { DataProvider, useData } from './data/store';
-import { ToastProvider } from './components/ui';
+import { ToastProvider, useToast } from './components/ui';
+import { maKoncept } from './lib/pamet';
 import { Uvod } from './components/Uvod';
 import Prehled from './screens/Prehled';
 import Najemnici from './screens/Najemnici';
@@ -21,6 +22,15 @@ function Posun() {
     if (kotva) setTimeout(() => kotva.scrollIntoView({ behavior: 'smooth' }), 50);
     else window.scrollTo(0, 0);
   }, [pathname, hash]);
+  return null;
+}
+
+// Po obnovení aplikace s rozpracovaným zápisem krátce oznámit, že se pokračuje.
+const obnovaPriStartu = maKoncept();
+function HlaskaObnovy() {
+  const toast = useToast();
+  const { nacteno } = useData();
+  useEffect(() => { if (nacteno && obnovaPriStartu) toast('Pokračujete v rozpracovaném zápisu'); }, [nacteno, toast]);
   return null;
 }
 
@@ -51,6 +61,7 @@ export default function App() {
       <DataProvider>
         <ToastProvider>
           <Obrazovky />
+          <HlaskaObnovy />
           <Uvod />
         </ToastProvider>
       </DataProvider>

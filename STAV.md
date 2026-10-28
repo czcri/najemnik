@@ -60,3 +60,7 @@ Odloženo: widget na plochu + skutečné notifikace (nativní obal Capacitor/APK
 ## 2026-10-28 – verze 2.3
 
 - Platby: výběr měsíce a roku (šipky ‹ › a klepnutí na měsíc = výběr měsíce/roku), od začátku prvního nájmu po aktuální měsíc; „Zpět na aktuální měsíc“.
+
+## 2026-10-28 – verze 2.3.1
+
+- Rozpracované formuláře se obnoví po přepnutí do jiné aplikace / ukončení Androidem (spec. kap. 15); automatický reload po aktualizaci jen hned po spuštění.

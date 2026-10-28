@@ -129,6 +129,23 @@ try {
   await jdi('#/najemnici');
   over((await text()).includes('Petra Pilotová'), 'nájemník z pilotu v seznamu');
 
+  // 1b) Rozpracovaný formulář přežije ukončení aplikace (přepnutí do kontaktů, Android aplikaci zavře)
+  await klik('Nový nájemník');
+  await vypln({ 'Jméno': 'Rozpracovaný Nájemník', 'Telefon': '601 222 333' });
+  await cdp('Page.reload');
+  await pockej(1500);
+  t = await text();
+  const obnoveno = await js(`[...document.querySelectorAll('label')].find(l => l.querySelector('span')?.innerText.trim() === 'Jméno')?.querySelector('input')?.value ?? ''`);
+  over(t.includes('Nový nájemník') && obnoveno === 'Rozpracovaný Nájemník', 'po restartu se rozpracovaný formulář obnoví', obnoveno);
+  over(t.includes('Pokračujete v rozpracovaném zápisu') && !(await js(`!!document.querySelector('[aria-label="Úvodní obrazovka"]')`)), 'hláška o obnově, bez úvodní obrazovky');
+  await klik('Zavřít');
+  await cdp('Page.reload');
+  await pockej(4000);
+  over(!(await text()).includes('Nový nájemník'), 'zavřený formulář se po restartu neobnovuje');
+  await klik('Nový nájemník');
+  over(await js(`[...document.querySelectorAll('label')].find(l => l.querySelector('span')?.innerText.trim() === 'Jméno')?.querySelector('input')?.value ?? 'x'`) === '', 'nový formulář je po zavření zase prázdný');
+  await klik('Zavřít');
+
   // 2) Nový nájemník
   await klik('Nový nájemník');
   await vypln({ 'Jméno': 'Jan Testovací', 'Nemovitost': 'Byt 1 – Kolín', 'Nájem od': '2026-08', 'Nájem vč. služeb': '10000', 'Telefon': '777 123 456', 'Variabilní symbol': '1001' });
@@ -178,7 +195,7 @@ try {
   await snimek('prehled');
   await klik('O aplikaci');
   t = await text();
-  over(t.includes('verze 2.3') && t.toLowerCase().includes('vytvořilo'), 'panel O aplikaci z loga v záhlaví');
+  over(t.includes('verze 2.3.1') && t.toLowerCase().includes('vytvořilo'), 'panel O aplikaci z loga v záhlaví');
   await snimek('o-aplikaci', false);
   await klik('Zavřít');
   await jdi('#/dluznici');

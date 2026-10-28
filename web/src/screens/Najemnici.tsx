@@ -6,6 +6,7 @@ import { FormNajemnik } from '../components/formulare';
 import { useData, type Prehled } from '../data/store';
 import { kc, pocet } from '../lib/format';
 import type { Stav } from '../types';
+import { usePamet } from '../lib/pamet';
 
 export function RadekNajemnika({ r, vpravo }: { r: Prehled; vpravo?: ReactNode }) {
   return (
@@ -34,7 +35,7 @@ export default function Najemnici() {
   const navigate = useNavigate();
   const [filtr, setFiltr] = useState<(typeof FILTRY)[number]['k']>('vse');
   const [hledat, setHledat] = useState('');
-  const [novy, setNovy] = useState(false);
+  const [novy, setNovy] = usePamet('najemnici:novy', false);
   const aktivni = prehled.filter(r => !r.ukonceny);
   const vyhovuje = (r: Prehled) =>
     (filtr === 'vse' || r.stav === filtr || (r.najemnik.zpusobPlaceni ?? 'ucet') === filtr)

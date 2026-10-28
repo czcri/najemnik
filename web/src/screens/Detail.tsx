@@ -9,6 +9,7 @@ import { useData } from '../data/store';
 import { aktualniNajem, mesicZData, zpusobPlatby } from '../lib/core';
 import { NazevMesice, datumCz, kc, kratkyMesic, odMesice } from '../lib/format';
 import type { Najemnik, Platba, Vydaj } from '../types';
+import { usePamet } from '../lib/pamet';
 
 type Okno = { typ: 'platba'; platba?: Platba } | { typ: 'vydaj'; vydaj?: Vydaj } | { typ: 'najem' } | { typ: 'upravit' } | { typ: 'zprava' } | null;
 
@@ -69,8 +70,8 @@ function MalyGraf({ najemnik, platby }: { najemnik: Najemnik; platby: Platba[] }
 export default function Detail() {
   const { id } = useParams();
   const { data, dnes, stav } = useData();
-  const [okno, setOkno] = useState<Okno>(null);
-  const [zalozka, setZalozka] = useState<'platby' | 'mesice' | 'vydaje'>('platby');
+  const [okno, setOkno] = usePamet<Okno>(`detail:${id}:okno`, null);
+  const [zalozka, setZalozka] = usePamet<'platby' | 'mesice' | 'vydaje'>(`detail:${id}:zalozka`, 'platby');
   const n = data.najemnici.find(x => x.id === id);
   if (!n) return <Navigate to="/najemnici" replace />;
 

@@ -6,6 +6,7 @@ import { aktualniNajem, castkaPredpisu, mesicZData, normalizujUcet, parseCastka,
 import { datumCz, kc, noveId, odMesice } from '../lib/format';
 import { Chyba, Panel, Pole, Prepinac, Tlacitko, VSTUP, useToast } from './ui';
 import type { Najemnik, Platba, Vydaj, Zpusob } from '../types';
+import { usePamet } from '../lib/pamet';
 
 const BANKY: Record<string, string> = { fio: 'Fio', cs: 'Česká spořitelna', kb: 'Komerční banka' };
 const ZPUSOBY = [{ k: 'prevod' as const, l: 'Převodem', i: Landmark }, { k: 'hotove' as const, l: 'Hotově', i: Banknote }];
@@ -22,11 +23,12 @@ export function FormPlatba({ najemnik, platba, onClose }: { najemnik: Najemnik; 
   const toast = useToast();
   const s = stav(najemnik.id);
   const predvyplneno = Math.max(aktualniNajem(najemnik, dnes), s.dluh + s.tentoMesic) || aktualniNajem(najemnik, dnes);
-  const [datum, setDatum] = useState(platba?.datum ?? dnes);
-  const [castka, setCastka] = useState(String(platba?.castka ?? predvyplneno));
-  const [zpusob, setZpusob] = useState<'prevod' | 'hotove'>(
+  const k = `platba:${najemnik.id}:${platba?.id ?? 'nova'}`;
+  const [datum, setDatum] = usePamet(`${k}:datum`, platba?.datum ?? dnes);
+  const [castka, setCastka] = usePamet(`${k}:castka`, String(platba?.castka ?? predvyplneno));
+  const [zpusob, setZpusob] = usePamet<'prevod' | 'hotove'>(`${k}:zpusob`, 
     platba?.zdroj?.typ === 'hotove' ? 'hotove' : platba?.zdroj?.typ === 'prevod' ? 'prevod' : najemnik.zpusobPlaceni === 'hotove' ? 'hotove' : 'prevod');
-  const [poznamka, setPoznamka] = useState(platba?.poznamka ?? '');
+  const [poznamka, setPoznamka] = usePamet(`${k}:poznamka`, platba?.poznamka ?? '');
   const [chyba, setChyba] = useState<string | null>(null);
   const zVypisu = platba?.zdroj?.typ === 'vypis' ? platba.zdroj : null;
 
@@ -78,9 +80,10 @@ export function FormVydaj({ najemnik, vydaj, onClose }: { najemnik: Najemnik; vy
   const { akce, dnes, data } = useData();
   const toast = useToast();
   const prvni = !data.vydaje.some(v => v.najemnikId === najemnik.id) && !data.platby.some(p => p.najemnikId === najemnik.id);
-  const [datum, setDatum] = useState(vydaj?.datum ?? dnes);
-  const [popis, setPopis] = useState(vydaj?.popis ?? (prvni ? 'Počáteční dluh' : ''));
-  const [castka, setCastka] = useState(vydaj ? String(vydaj.castka) : '');
+  const k = `vydaj:${najemnik.id}:${vydaj?.id ?? 'novy'}`;
+  const [datum, setDatum] = usePamet(`${k}:datum`, vydaj?.datum ?? dnes);
+  const [popis, setPopis] = usePamet(`${k}:popis`, vydaj?.popis ?? (prvni ? 'Počáteční dluh' : ''));
+  const [castka, setCastka] = usePamet(`${k}:castka`, vydaj ? String(vydaj.castka) : '');
   const [chyba, setChyba] = useState<string | null>(null);
 
   async function uloz(e: FormEvent) {
@@ -117,8 +120,8 @@ export function FormVydaj({ najemnik, vydaj, onClose }: { najemnik: Najemnik; vy
 export function FormNajem({ najemnik, onClose }: { najemnik: Najemnik; onClose: () => void }) {
   const { akce, dnes } = useData();
   const toast = useToast();
-  const [od, setOd] = useState(mesicZData(dnes) < najemnik.zacatek ? najemnik.zacatek : mesicZData(dnes));
-  const [castka, setCastka] = useState(String(aktualniNajem(najemnik, dnes)));
+  const [od, setOd] = usePamet(`najem:${najemnik.id}:od`, mesicZData(dnes) < najemnik.zacatek ? najemnik.zacatek : mesicZData(dnes));
+  const [castka, setCastka] = usePamet(`najem:${najemnik.id}:castka`, String(aktualniNajem(najemnik, dnes)));
   const [chyba, setChyba] = useState<string | null>(null);
   async function uloz(e: FormEvent) {
     e.preventDefault();
@@ -155,15 +158,16 @@ export function FormNajem({ najemnik, onClose }: { najemnik: Najemnik; onClose: 
 export function FormNajemnik({ najemnik, onClose, onUlozeno }: { najemnik?: Najemnik; onClose: () => void; onUlozeno?: (id: string) => void }) {
   const { akce, dnes, data } = useData();
   const toast = useToast();
-  const [f, setF] = useState({
+  const k = `najemnik:${najemnik?.id ?? 'novy'}`;
+  const [f, setF] = usePamet(`${k}:pole`, {
     jmeno: najemnik?.jmeno ?? '', osloveni: najemnik?.osloveni ?? '', oznaceni: najemnik?.oznaceni ?? '',
     zacatek: najemnik?.zacatek ?? mesicZData(dnes), castka: '', telefon: najemnik?.telefon ?? '', email: najemnik?.email ?? '',
     vs: najemnik?.vs ?? '', poznamka: najemnik?.poznamka ?? '', konec: najemnik?.konec ?? '',
     ucetProPlatby: najemnik?.ucetProPlatby ?? '', denHotovosti: najemnik?.denHotovosti ? String(najemnik.denHotovosti) : '',
   });
-  const [zpusob, setZpusob] = useState<Zpusob>(najemnik?.zpusobPlaceni ?? 'ucet');
-  const [ucty, setUcty] = useState<string[]>(najemnik?.uctyPlatce ?? []);
-  const [novyUcet, setNovyUcet] = useState('');
+  const [zpusob, setZpusob] = usePamet<Zpusob>(`${k}:zpusob`, najemnik?.zpusobPlaceni ?? 'ucet');
+  const [ucty, setUcty] = usePamet<string[]>(`${k}:ucty`, najemnik?.uctyPlatce ?? []);
+  const [novyUcet, setNovyUcet] = usePamet(`${k}:novyUcet`, '');
   const [chyba, setChyba] = useState<string | null>(null);
   const zmen = (k: keyof typeof f) => (e: { target: { value: string } }) => setF({ ...f, [k]: e.target.value });
 

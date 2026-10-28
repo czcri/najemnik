@@ -7,6 +7,7 @@ import { parseCastka, seznamMesice, type PolozkaMesice } from '../lib/core';
 import { NazevMesice, datumCz, datumKratce, kc, noveId, pocet } from '../lib/format';
 import { Chyba, Panel, Pole, Tlacitko, VSTUP, useToast } from './ui';
 import { mesicZData } from '../lib/core';
+import { usePamet } from '../lib/pamet';
 
 export type HlavniKartaRef = { ukaz: (strana: number) => void };
 
@@ -55,7 +56,7 @@ export const HlavniKarta = forwardRef<HlavniKartaRef, { mesic: ReactNode; uvodni
 function StranaSeznamu({ zpusob }: { zpusob: 'hotove' | 'ucet' }) {
   const { data, dnes, akce } = useData();
   const toast = useToast();
-  const [upravit, setUpravit] = useState<PolozkaMesice | null>(null);
+  const [upravit, setUpravit] = usePamet<PolozkaMesice | null>(`prevzeti:${zpusob}`, null);
   const mesic = mesicZData(dnes);
   const s = seznamMesice(data.najemnici, data.platby, data.vydaje, dnes, zpusob);
   const hotove = zpusob === 'hotove';
@@ -122,8 +123,8 @@ function StranaSeznamu({ zpusob }: { zpusob: 'hotove' | 'ucet' }) {
 
 function PanelPrevzeti({ p, onClose, onPotvrdit }: { p: PolozkaMesice; onClose: () => void; onPotvrdit: (castka: number, datum: string) => void }) {
   const { dnes } = useData();
-  const [castka, setCastka] = useState(String(p.chybi));
-  const [datum, setDatum] = useState(dnes);
+  const [castka, setCastka] = usePamet(`prevzeti:${p.najemnik.id}:castka`, String(p.chybi));
+  const [datum, setDatum] = usePamet(`prevzeti:${p.najemnik.id}:datum`, dnes);
   const [chyba, setChyba] = useState<string | null>(null);
   return (
     <Panel title="Potvrdit převzetí hotovosti" onClose={onClose}>

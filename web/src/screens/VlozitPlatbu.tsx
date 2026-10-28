@@ -6,6 +6,7 @@ import { vysledekPoPlatbe } from '../components/formulare';
 import { useData } from '../data/store';
 import { aktualniNajem, parseCastka, stavNajemnika } from '../lib/core';
 import { kc, noveId } from '../lib/format';
+import { usePamet } from '../lib/pamet';
 
 const bezDiakritiky = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
@@ -13,14 +14,14 @@ export default function VlozitPlatbu() {
   const { data, dnes, prehled, akce } = useData();
   const toast = useToast();
   const aktivni = prehled.filter(r => !r.ukonceny);
-  const [id, setId] = useState(aktivni.find(r => r.dluh + r.tentoMesic > 0)?.najemnik.id ?? aktivni[0]?.najemnik.id ?? '');
+  const [id, setId] = usePamet('vlozit:id', aktivni.find(r => r.dluh + r.tentoMesic > 0)?.najemnik.id ?? aktivni[0]?.najemnik.id ?? '');
   const [hledat, setHledat] = useState('');
   const r = prehled.find(x => x.najemnik.id === id);
   const navrh = (x = r) => x ? String(Math.max(x.najem, x.dluh + x.tentoMesic) || x.najem) : '';
-  const [castka, setCastka] = useState(navrh());
-  const [zpusob, setZpusob] = useState<'prevod' | 'hotove'>(r?.najemnik.zpusobPlaceni === 'hotove' ? 'hotove' : 'prevod');
-  const [datum, setDatum] = useState(dnes);
-  const [poznamka, setPoznamka] = useState('');
+  const [castka, setCastka] = usePamet('vlozit:castka', navrh());
+  const [zpusob, setZpusob] = usePamet<'prevod' | 'hotove'>('vlozit:zpusob', r?.najemnik.zpusobPlaceni === 'hotove' ? 'hotove' : 'prevod');
+  const [datum, setDatum] = usePamet('vlozit:datum', dnes);
+  const [poznamka, setPoznamka] = usePamet('vlozit:poznamka', '');
   const [chyba, setChyba] = useState<string | null>(null);
   const [hotovo, setHotovo] = useState<{ jmeno: string; castka: number; text: string; ok: boolean; id: string } | null>(null);
 

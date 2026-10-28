@@ -6,10 +6,11 @@ import { PanelUpominky } from '../components/upominka';
 import { useData, type Prehled } from '../data/store';
 import { datumCz, kc, pocet } from '../lib/format';
 import type { Najemnik } from '../types';
+import { usePamet } from '../lib/pamet';
 
 export default function Dluznici() {
   const { prehled, souhrn } = useData();
-  const [zprava, setZprava] = useState<Najemnik | null>(null);
+  const [zprava, setZprava] = usePamet<Najemnik | null>('dluznici:zprava', null);
   const seznam = prehled.filter(r => r.dluh > 0).sort((a, b) => b.dluh - a.dluh);
   return (
     <AppShell title="Dlužníci" subtitle={seznam.length ? pocet(seznam.length, 'dlužník', 'dlužníci', 'dlužníků') : 'Nikdo nedluží'}>
@@ -37,8 +38,8 @@ export default function Dluznici() {
 function KartaDluznika({ r, onZprava }: { r: Prehled; onZprava: () => void }) {
   const { data, dnes, akce } = useData();
   const n = r.najemnik;
-  const [text, setText] = useState(n.poznamkaDluh?.text ?? '');
-  const [upravuji, setUpravuji] = useState(false);
+  const [text, setText] = usePamet(`dluh:${n.id}:text`, n.poznamkaDluh?.text ?? '');
+  const [upravuji, setUpravuji] = usePamet(`dluh:${n.id}:upravuji`, false);
   const posledni = data.platby.filter(p => p.najemnikId === n.id).sort((a, b) => b.datum.localeCompare(a.datum))[0];
   const upominka = data.upominky.filter(u => u.najemnikId === n.id).sort((a, b) => b.datum.localeCompare(a.datum))[0];
 

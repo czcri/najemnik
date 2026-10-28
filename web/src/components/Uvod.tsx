@@ -1,9 +1,11 @@
 // Úvodní obrazovka při každém spuštění aplikace: Nájemník + „Vytvořilo Simply Software“. Klepnutím přeskočit.
 import { useEffect, useState } from 'react';
 import { LogoSimplySoftware } from './logo';
+import { maKoncept } from '../lib/pamet';
 
 const DELKA_MS = 3000;
-let ukazano = false; // jen při spuštění, ne při přechodech mezi obrazovkami
+// Jen při spuštění, ne při přechodech mezi obrazovkami. Při obnově rozpracovaného zápisu se přeskočí.
+let ukazano = maKoncept();
 
 export function Uvod() {
   const [viditelny, setViditelny] = useState(!ukazano);

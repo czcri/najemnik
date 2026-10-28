@@ -252,3 +252,10 @@ Změny proti pilotu:
 - **Nastavení dole:** verze + „Vytvořilo“ + logo (symbol vedle nápisu).
 - Ikona aplikace na ploše zůstává domek (logo patří k „Vytvořilo“).
 - Logo: přesné křivky z `logo/Logo-02.pdf` a `Logo-03.pdf` (písma vložená v PDF, převedeno přes Poppler `pdftocairo -svg`) → `web/public/logo/simply-software-{pod,vedle}[-svetle].svg`; světlá varianta pro tmavý režim. Symbol SS v záhlaví z `Logo-01.svg` (barva podle režimu). Zdrojová složka `logo/` je mimo git.
+
+## 15. Rozpracované zápisy přežijí přepnutí aplikace (2026-10-28, verze 2.3.1)
+
+- Všechny formuláře (nájemník, platba, výdaj, změna nájmu, vložit platbu, převzetí hotovosti, zpráva/upomínka, poznámka k dluhu) a otevřený panel / záložka v detailu se průběžně ukládají do úložiště telefonu (`localStorage`, klíče `koncept:*`, platnost 24 h).
+- Když Android aplikaci na pozadí ukončí (např. při hledání čísla v kontaktech), po návratu se otevře stejná obrazovka a formulář s vyplněnými údaji; krátká hláška „Pokračujete v rozpracovaném zápisu“, úvodní obrazovka se v tom případě přeskočí.
+- Zavřením formuláře, uložením nebo odchodem z obrazovky se koncept smaže.
+- Automatické načtení nové verze aplikace jen do 8 s po spuštění (dříve kdykoli → mohlo přerušit rozpracovaný zápis); jinak se nová verze projeví při dalším spuštění.
