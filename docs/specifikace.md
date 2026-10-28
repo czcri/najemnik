@@ -215,3 +215,28 @@ Změny proti pilotu:
 - **Detail nájemníka:** malý hravý graf posledních 6–12 měsíců (zaplatil – barva podle účet/hotově – vs. měl zaplatit, dluhové měsíce podbarvené).
 - **Hotově vs. na účet je zásadní:** nájemník má `zpusobPlaceni: 'ucet' | 'hotove'` (výchozí pro nové platby, filtr, ikona); statistiky počítají podle skutečného zdroje platby (`vypis`/`prevod` = účet, `hotove` = hotovost).
 - Návrhy na později (nerozhodnuto): QR platba, kauce, zámek PIN, notifikace 1. v měsíci.
+
+## 13. Posuvná hlavní karta: Hotovost a Na účet (návrh 2026-10-28, k odsouhlasení)
+
+**Hlavní karta na přehledu je posuvná do strany** (tečky pod kartou):
+1. **Měsíc** – jako dosud (přišlo, % vybráno, dluh po splatnosti, očekáváno).
+2. **Hotovost** – kontrolní seznam převzetí hotovosti v aktuálním měsíci.
+3. **Na účet** – kdo z platících převodem už v tomto měsíci zaplatil (připraveno; závisí na tom, kdy se nahrávají výpisy – viz níže).
+
+**Nájemník – nové pole** „Hotovost čekám k … dni v měsíci“ (1–31, jen u způsobu placení Hotově).
+
+**Strana Hotovost:**
+- Seznam nájemníků s výchozím způsobem placení **Hotově**, kteří v aktuálním měsíci ještě nemají zaplaceno; **seřazeno podle dne „čekám k“** (bez dne na konec).
+- Položka: jméno, nemovitost, „čekám k 5. 11.“, částka, která za tento měsíc ještě chybí; po termínu zvýrazněno.
+- **Tři stavy:** nezaplaceno · **částečně – chybí X Kč** · zaplaceno (= zmizí ze seznamu).
+- **Zaškrtnutí** = zapíše platbu *hotově* s dnešním datem a částkou, která za měsíc chybí → položka zmizí, platba je v platbách, detailu, statistikách. Krátké potvrzení s možností **Zpět**.
+- **Klepnutí na částku** = změnit částku / datum před zapsáním (částečná platba → položka zůstane ve stavu „částečně“).
+- Dole souhrn „Převzato 3 z 7 · 33 000 Kč“.
+- **Obnova 1. dne v měsíci** je automatická: stav se počítá z plateb s datem v aktuálním měsíci vůči nájmu (+ výdajům) tohoto měsíce, takže nový měsíc začíná s plným seznamem. Starší dluh se zde neřeší (je v Dlužnících); platba převodem od hotovostního nájemníka se také započte.
+
+**Strana Na účet:** stejný princip pro nájemníky „Na účet“ (bez zaškrtávání – platby přicházejí z výpisu nebo ručního zápisu), s informací „poslední import výpisu: …“. Protože výpisy se nahrávají až na konci měsíce, bude v průběhu měsíce většinou prázdná → **k doladění** (možnosti: automatické načítání Fio přes API, e-mailová oznámení banky, ruční odškrtnutí převodu).
+
+**Upozornění (k doladění):** webová aplikace bez serveru nemůže sama poslat notifikaci, když je zavřená. Možnosti:
+- a) **Kalendář** – aplikace vytvoří opakované události („Hotovost – Novák, každého 5.“) do Google Kalendáře; upozornění pak dělá kalendář. Bez serveru, data neodcházejí. *(doporučeno jako první krok)*
+- b) Při otevření aplikace banner „Dnes čekáš hotovost od …“.
+- c) Skutečné push notifikace – potřebují malý server; na něj by odcházel jen rozpis dnů, ne jména a částky.
