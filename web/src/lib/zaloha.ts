@@ -33,7 +33,8 @@ export async function sdilejZalohu(data: Data) {
   }
 }
 
-export async function prectiZalohu(f: File): Promise<Data> {
-  const z = nactiZalohu(await f.text());
-  return { ...z, nastaveni: { ...vychoziNastaveni(), ...z.nastaveni } };
+export async function prectiZalohu(f: File): Promise<{ data: Data; varovani: string[] }> {
+  const { varovani, ...z } = nactiZalohu(await f.text());
+  const vychozi = vychoziNastaveni();
+  return { data: { ...z, nastaveni: { ...vychozi, ...z.nastaveni, pravidla: { ...vychozi.pravidla, ...z.nastaveni.pravidla } } }, varovani };
 }

@@ -297,3 +297,13 @@ Změny proti pilotu:
 - **Za měsíc**: kdo k dnešku **stále dluží** za vybraný měsíc (pozdě zaplacené a vyrovnané se nezobrazí); „měl / zaplaceno“, chybí.
 - **V měsíci**: předpis měsíce (nájem + úpravy + výdaje) vs. co v tom měsíci **skutečně přišlo** (podle data, za jakýkoli měsíc) + přebytek z předchozích měsíců (platba dopředu / přeplatek se započte do budoucích měsíců). Nedoplatek z předchozích měsíců se nepřenáší. Příklad: nájem 20 000, přišlo 18 000 → dluh v měsíci 2 000.
 - Logika `core/dluhy.js` (testy `tests/dluhy.test.mjs`).
+
+## 20. Opravy podle revize 2026-10-29 (viz docs/revize-2026-10-29.md)
+
+**Blok 1 – bezpečnost dat (verze 2.7):**
+- Převzetí dat z první verze proběhne jen jednou (příznak `pilotPrevzat`, nebo existující nastavení) – po smazání všech nájemníků / obnově se stará data nevrátí; platby bez nájemníka se nepřebírají.
+- Koncepty formulářů mají „otisk“ upravovaného záznamu; když se záznam mezitím změnil nebo zmizel, koncept se zahodí. V konceptu otevřeného panelu je jen id záznamu. Po obnově ze zálohy a smazání nájemníka se koncepty mažou; prošlé koncepty se mažou při startu.
+- Záchranná obrazovka při chybě zobrazení s tlačítkem „Stáhnout zálohu“.
+- Obnova: důkladná kontrola tvaru dat (poškozená záloha se odmítne), osiřelé záznamy se vynechají s upozorněním, nastavení se očistí a doplní; před obnovou se automaticky stáhne záloha současných dat; potvrzení ukazuje všechny počty.
+- Ochrana proti dvojímu klepnutí u všech ukládání (formuláře, vložit platbu, převzetí hotovosti, import).
+- Offline: service worker při instalaci stáhne všechny soubory verze (seznam `soubory.json` z buildu, číslo sestavení v `sw.js`), novou verzi převezme až kompletní; chybové stránky se neukládají. Import PDF tak funguje i offline.

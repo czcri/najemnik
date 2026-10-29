@@ -1,7 +1,7 @@
 // Společné prvky vzhledu (podle návrhu z Lovable).
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Banknote, CalendarDays, ChevronLeft, ChevronRight, Home, Landmark, ListChecks, Plus, Settings, Users, X, type LucideIcon } from 'lucide-react';
-import { createContext, useCallback, useContext, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { NazevMesice, kc, posunMesic } from '../lib/format';
 import type { Stav, Zpusob } from '../types';
@@ -98,6 +98,21 @@ export function stavPopis(s: { stav: Stav; dluh: number; tentoMesic: number; pre
 
 export const Chip = ({ stav, children }: { stav: Stav; children: ReactNode }) =>
   <span className={`inline-block rounded-full px-2 py-0.5 text-[11px] font-bold tabular ${STAV_CHIP[stav]}`}>{children}</span>;
+
+// Ochrana proti dvojímu klepnutí: obalená akce neběží dvakrát současně (zablokuje se hned, ne až po překreslení).
+export function useChrana() {
+  const bezi = useRef(false);
+  const [busy, setBusy] = useState(false);
+  const chran = useCallback(<A extends unknown[]>(f: (...a: A) => unknown) => async (...a: A) => {
+    // Odeslání formuláře zrušit vždy – i u zablokovaného druhého klepnutí (jinak by se stránka znovu načetla).
+    (a[0] as { preventDefault?: () => void } | undefined)?.preventDefault?.();
+    if (bezi.current) return;
+    bezi.current = true;
+    setBusy(true);
+    try { await f(...a); } finally { bezi.current = false; setBusy(false); }
+  }, []);
+  return [busy, chran] as const;
+}
 
 // Spodní panel (formuláře, upomínka).
 export function Panel({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {

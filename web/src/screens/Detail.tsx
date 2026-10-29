@@ -8,10 +8,11 @@ import { PanelUpominky } from '../components/upominka';
 import { useData } from '../data/store';
 import { aktualniNajem, dalsiMesic, mesicZData, najemVMesici, obdobiPlatby, upravaVMesici, zpusobPlatby } from '../lib/core';
 import { NazevMesice, datumCz, kc, kratkyMesic, nazevMesice, odMesice } from '../lib/format';
-import type { Najemnik, Platba, Vydaj } from '../types';
+import type { Najemnik, Platba } from '../types';
 import { usePamet } from '../lib/pamet';
 
-type Okno = { typ: 'platba'; platba?: Platba } | { typ: 'vydaj'; vydaj?: Vydaj; datum?: string } | { typ: 'mesic'; mesic: string } | { typ: 'najem' } | { typ: 'upravit' } | { typ: 'zprava' } | null;
+// V konceptu (usePamet) jen id záznamu – ne kopie, aby se po smazání / změně nevrátila stará data.
+type Okno = { typ: 'platba'; id?: string } | { typ: 'vydaj'; id?: string; datum?: string } | { typ: 'mesic'; mesic: string } | { typ: 'najem' } | { typ: 'upravit' } | { typ: 'zprava' } | null;
 
 const BANKY: Record<string, string> = { fio: 'Fio', cs: 'ČS', kb: 'KB' };
 export function ZdrojStitek({ p }: { p: Platba }) {
@@ -86,6 +87,8 @@ export default function Detail() {
   const pristi = n.zacatek <= pristiMesic && (!n.konec || n.konec >= pristiMesic)
     ? { mesic: pristiMesic, najem: najemVMesici(n, pristiMesic), uprava: upravaVMesici(n, pristiMesic), zaplatil: s.budouci?.[pristiMesic] ?? 0 }
     : null;
+  const upravovanaPlatba = okno?.typ === 'platba' && okno.id ? data.platby.find(p => p.id === okno.id) : undefined;
+  const upravovanyVydaj = okno?.typ === 'vydaj' && okno.id ? data.vydaje.find(v => v.id === okno.id) : undefined;
   const posledniUpominka = data.upominky.filter(u => u.najemnikId === n.id).sort((a, b) => b.datum.localeCompare(a.datum))[0];
 
   const [hlavni, barva] = s.stav === 'dluh' ? [`Dluží ${kc(s.dluh)}`, STAV_TEXT.dluh]
@@ -144,7 +147,7 @@ export default function Detail() {
           <Card className="mt-3">
             {platby.length === 0 && <p className="p-6 text-center text-sm text-muted-foreground">Zatím žádná platba.</p>}
             {platby.map(p => (
-              <button key={p.id} onClick={() => setOkno({ typ: 'platba', platba: p })} className="flex min-h-14 w-full items-center gap-3 px-4 py-3 text-left active:bg-muted">
+              <button key={p.id} onClick={() => setOkno({ typ: 'platba', id: p.id })} className="flex min-h-14 w-full items-center gap-3 px-4 py-3 text-left active:bg-muted">
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold">{datumCz(p.datum)} <ZdrojStitek p={p} /> <span className="text-xs font-medium text-muted-foreground">za {nazevMesice(obdobiPlatby(p, n))}</span></p>
                   {p.poznamka && <p className="truncate text-xs text-muted-foreground">{p.poznamka}</p>}
@@ -194,7 +197,7 @@ export default function Detail() {
           <Card className="mt-3">
             {vydaje.length === 0 && <p className="p-6 text-center text-sm text-muted-foreground">Žádné jednorázové výdaje ani dluhy.</p>}
             {vydaje.map(v => (
-              <button key={v.id} onClick={() => setOkno({ typ: 'vydaj', vydaj: v })} className="flex min-h-14 w-full items-center gap-3 px-4 py-3 text-left active:bg-muted">
+              <button key={v.id} onClick={() => setOkno({ typ: 'vydaj', id: v.id })} className="flex min-h-14 w-full items-center gap-3 px-4 py-3 text-left active:bg-muted">
                 <div className="min-w-0 flex-1"><p className="text-sm font-semibold">{v.popis}</p><p className="text-xs text-muted-foreground">{datumCz(v.datum)}</p></div>
                 <p className="font-bold text-status-debt tabular">{kc(v.castka)}</p>
               </button>
@@ -204,8 +207,8 @@ export default function Detail() {
         {n.poznamka && <p className="mt-6 px-2 text-sm text-muted-foreground">{n.poznamka}</p>}
       </Main>
 
-      {okno?.typ === 'platba' && <FormPlatba najemnik={n} platba={okno.platba} onClose={() => setOkno(null)} />}
-      {okno?.typ === 'vydaj' && <FormVydaj najemnik={n} vydaj={okno.vydaj} datumVychozi={okno.datum} onClose={() => setOkno(null)} />}
+      {okno?.typ === 'platba' && (!okno.id || upravovanaPlatba) && <FormPlatba najemnik={n} platba={upravovanaPlatba} onClose={() => setOkno(null)} />}
+      {okno?.typ === 'vydaj' && (!okno.id || upravovanyVydaj) && <FormVydaj najemnik={n} vydaj={upravovanyVydaj} datumVychozi={okno.datum} onClose={() => setOkno(null)} />}
       {okno?.typ === 'mesic' && <PanelMesice najemnik={n} mesic={okno.mesic} onClose={() => setOkno(null)} onVydaj={datum => setOkno({ typ: 'vydaj', datum })} />}
       {okno?.typ === 'najem' && <FormNajem najemnik={n} onClose={() => setOkno(null)} />}
       {okno?.typ === 'upravit' && <FormNajemnik najemnik={n} onClose={() => setOkno(null)} />}

@@ -27,7 +27,7 @@ export const nastavUpravu = logika.nastavUpravu as unknown as (n: Najemnik, od: 
 export const dalsiMesic = logika.dalsiMesic as (m: string) => string;
 export const mesicZData = logika.mesicZData as (d: string) => string;
 export const vytvorZalohu = logika.vytvorZalohu as unknown as (d: Data, cas: string) => object;
-export const nactiZalohu = logika.nactiZalohu as unknown as (text: string) => Omit<Data, 'nastaveni'> & { nastaveni: Partial<Data['nastaveni']> };
+export const nactiZalohu = logika.nactiZalohu as unknown as (text: string) => Omit<Data, 'nastaveni'> & { nastaveni: Partial<Data['nastaveni']>; varovani: string[] };
 
 export type Pohyb = {
   datum: string; castkaHal: number; protiucet: string; nazevProtiuctu: string;

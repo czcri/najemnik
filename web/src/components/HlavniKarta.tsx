@@ -5,7 +5,7 @@ import { Check, ChevronRight, FileUp } from 'lucide-react';
 import { useData } from '../data/store';
 import { parseCastka, seznamMesice, type PolozkaMesice } from '../lib/core';
 import { NazevMesice, datumCz, datumKratce, kc, nazevMesice, noveId, pocet } from '../lib/format';
-import { Chyba, Panel, Pole, Tlacitko, VSTUP, useToast } from './ui';
+import { Chyba, Panel, Pole, Tlacitko, VSTUP, useChrana, useToast } from './ui';
 import { mesicZData } from '../lib/core';
 import { usePamet } from '../lib/pamet';
 
@@ -56,9 +56,11 @@ export const HlavniKarta = forwardRef<HlavniKartaRef, { mesic: ReactNode; uvodni
 function StranaSeznamu({ zpusob }: { zpusob: 'hotove' | 'ucet' }) {
   const { data, dnes, akce } = useData();
   const toast = useToast();
-  const [upravit, setUpravit] = usePamet<PolozkaMesice | null>(`prevzeti:${zpusob}`, null);
+  const [upravitId, setUpravitId] = usePamet<string | null>(`prevzeti:${zpusob}`, null);
   const mesic = mesicZData(dnes);
   const s = seznamMesice(data.najemnici, data.platby, data.vydaje, dnes, zpusob);
+  const upravit = s.polozky.find(p => p.najemnik.id === upravitId) ?? null;
+  const setUpravit = (p: PolozkaMesice | null) => setUpravitId(p?.najemnik.id ?? null);
   const hotove = zpusob === 'hotove';
   const posledniImport = data.nastaveni.importy[0]?.datum;
 
@@ -117,15 +119,16 @@ function StranaSeznamu({ zpusob }: { zpusob: 'hotove' | 'ucet' }) {
           ? <span className="text-right opacity-60">○ = převzít hotovost</span>
           : <Link to="/import" className="flex items-center gap-1 font-semibold opacity-80"><FileUp className="size-3.5" />{posledniImport ? `Import ${datumCz(posledniImport)}` : 'Nahrát výpis'}<ChevronRight className="size-3.5" /></Link>}
       </div>
-      {upravit && <PanelPrevzeti p={upravit} onClose={() => setUpravit(null)} onPotvrdit={(c, d) => { prevzit(upravit, c, d); setUpravit(null); }} />}
+      {upravit && <PanelPrevzeti p={upravit} onClose={() => setUpravit(null)} onPotvrdit={async (c, d) => { await prevzit(upravit, c, d); setUpravit(null); }} />}
     </section>
   );
 }
 
-function PanelPrevzeti({ p, onClose, onPotvrdit }: { p: PolozkaMesice; onClose: () => void; onPotvrdit: (castka: number, datum: string) => void }) {
+function PanelPrevzeti({ p, onClose, onPotvrdit }: { p: PolozkaMesice; onClose: () => void; onPotvrdit: (castka: number, datum: string) => unknown }) {
+  const [busy, chran] = useChrana();
   const { dnes } = useData();
-  const [castka, setCastka] = usePamet(`prevzeti:${p.najemnik.id}:castka`, String(p.chybi));
-  const [datum, setDatum] = usePamet(`prevzeti:${p.najemnik.id}:datum`, dnes);
+  const [castka, setCastka] = usePamet(`prevzeti:${p.najemnik.id}:castka`, String(p.chybi), String(p.chybi));
+  const [datum, setDatum] = usePamet(`prevzeti:${p.najemnik.id}:datum`, dnes, String(p.chybi));
   const [chyba, setChyba] = useState<string | null>(null);
   return (
     <Panel title="Potvrdit převzetí hotovosti" onClose={onClose}>
@@ -143,7 +146,7 @@ function PanelPrevzeti({ p, onClose, onPotvrdit }: { p: PolozkaMesice; onClose: 
         </Pole>
         <Pole label="Datum převzetí"><input type="date" value={datum} onChange={e => setDatum(e.target.value)} className={VSTUP} /></Pole>
         <Chyba text={chyba} />
-        <Tlacitko onClick={() => { const c = parseCastka(castka); if (!c) return setChyba('Částka musí být kladné celé číslo v korunách.'); onPotvrdit(c, datum); }}>
+        <Tlacitko disabled={busy} onClick={chran(async () => { const c = parseCastka(castka); if (!c) return setChyba('Částka musí být kladné celé číslo v korunách.'); await onPotvrdit(c, datum); })}>
           Potvrdit převzetí
         </Tlacitko>
         <Tlacitko typ="vedlejsi" onClick={onClose}>Zrušit</Tlacitko>

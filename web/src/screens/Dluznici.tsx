@@ -7,7 +7,7 @@ import { useData, type Prehled } from '../data/store';
 import { datumCz, kc, nazevMesice, pocet, posunMesic } from '../lib/format';
 import { dluhyVMesici, dluhyZaMesic, mesicZData } from '../lib/core';
 import type { Najemnik } from '../types';
-import { usePamet } from '../lib/pamet';
+import { otisk, usePamet } from '../lib/pamet';
 
 type Zalozka = 'celkem' | 'za' | 'v';
 
@@ -15,7 +15,9 @@ type Zalozka = 'celkem' | 'za' | 'v';
 // V měsíci (nájem měsíce vs. co v něm přišlo, s přebytkem z dřívějška) – spec. kap. 19.
 export default function Dluznici() {
   const { data, dnes, prehled, souhrn } = useData();
-  const [zprava, setZprava] = usePamet<Najemnik | null>('dluznici:zprava', null);
+  const [zpravaId, setZpravaId] = usePamet<string | null>('dluznici:zprava', null);
+  const zprava = data.najemnici.find(n => n.id === zpravaId) ?? null;
+  const setZprava = (n: Najemnik | null) => setZpravaId(n?.id ?? null);
   const [zalozka, setZalozka] = useState<Zalozka>('celkem');
   const aktualni = mesicZData(dnes);
   const nejstarsi = data.najemnici.map(n => n.zacatek).sort()[0] ?? aktualni;
@@ -114,8 +116,8 @@ function KartaMesice({ n, castka, popis, bezi, onZprava }: { n: Najemnik; castka
 function KartaDluznika({ r, onZprava }: { r: Prehled; onZprava: () => void }) {
   const { data, dnes, akce } = useData();
   const n = r.najemnik;
-  const [text, setText] = usePamet(`dluh:${n.id}:text`, n.poznamkaDluh?.text ?? '');
-  const [upravuji, setUpravuji] = usePamet(`dluh:${n.id}:upravuji`, false);
+  const [text, setText] = usePamet(`dluh:${n.id}:text`, n.poznamkaDluh?.text ?? '', otisk(n.poznamkaDluh));
+  const [upravuji, setUpravuji] = usePamet(`dluh:${n.id}:upravuji`, false, otisk(n.poznamkaDluh));
   const posledni = data.platby.filter(p => p.najemnikId === n.id).sort((a, b) => b.datum.localeCompare(a.datum))[0];
   const upominka = data.upominky.filter(u => u.najemnikId === n.id).sort((a, b) => b.datum.localeCompare(a.datum))[0];
 

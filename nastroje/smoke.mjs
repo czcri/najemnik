@@ -78,6 +78,8 @@ async function vypln(pole) {
   } })()`);
   await pockej(100);
 }
+// Počet záznamů v úložišti aplikace (IndexedDB najemnik-v2).
+const pocetVDb = store => js(`new Promise(ok => { const r = indexedDB.open('najemnik-v2'); r.onsuccess = () => { const q = r.result.transaction('${store}').objectStore('${store}').count(); q.onsuccess = () => { r.result.close(); ok(q.result); }; }; })`);
 let cislo = 0;
 // celaStranka: false u posuvné karty – focení celé stránky dočasně mění rozměry a posune ji.
 async function snimek(nazev, celaStranka = true) {
@@ -202,7 +204,10 @@ try {
   over(t.includes('Předvyplněn pravidelný měsíční nájem'), 'vložit platbu: předvyplněn pravidelný nájem (ne dluh)');
   await vypln({ 'Částka': '5000' });
   await klik('Převodem');
-  await klik('Uložit platbu');
+  const predDvojklikem = await pocetVDb('platby');
+  await js(`(() => { const f = document.querySelector('form'); f.requestSubmit(); f.requestSubmit(); })()`);
+  await pockej(600);
+  over(await pocetVDb('platby') === predDvojklikem + 1, 'dvojí odeslání zapíše jen jednu platbu');
   await pockej(500);
   t = await text();
   over(t.includes('Zbývá dluh'), 'vložit platbu: výsledek „Zbývá dluh…“', t.slice(0, 300));
@@ -216,7 +221,7 @@ try {
   await snimek('prehled');
   await klik('O aplikaci');
   t = await text();
-  over(t.includes('verze 2.6') && t.toLowerCase().includes('vytvořilo'), 'panel O aplikaci z loga v záhlaví');
+  over(t.includes('verze 2.7') && t.toLowerCase().includes('vytvořilo'), 'panel O aplikaci z loga v záhlaví');
   await snimek('o-aplikaci', false);
   await klik('Zavřít');
   await jdi('#/dluznici');
@@ -365,6 +370,18 @@ try {
   await klik('Spárovat platby');
   t = await text();
   over(t.includes('0 přiřazeno') && t.includes('Zapsat 0 plateb'), 'opakovaný import nezapíše platbu znovu', t.slice(0, 400));
+
+  const vMezipameti = await js(`caches.keys().then(async k => { let n = 0; for (const c of k) n += (await (await caches.open(c)).keys()).length; return n; })`);
+  over(vMezipameti > 10, 'offline: všechny soubory verze v mezipaměti', String(vMezipameti));
+
+  await jdi('#/najemnici/pilot');
+  await klik('Upravit');
+  await klik('Smazat nájemníka');
+  await pockej(500);
+  await cdp('Page.reload');
+  await pockej(4500);
+  await jdi('#/najemnici');
+  over(!(await text()).includes('Petra Pilotová'), 'smazaný nájemník z první verze se po restartu nevrátí');
 
   over(chyby.length === 0, 'bez chyb v konzoli', chyby.join(' | '));
 } catch (e) {

@@ -84,8 +84,15 @@ export const nahradVse = (data: Data) =>
 // Převzetí dat z pilotní verze (databáze 'najemnik'), jen když je nová databáze prázdná.
 export async function prevezmiZPilotu(): Promise<boolean> {
   const db = await otevri();
-  const pocet = await pozadavek(db.transaction('najemnici').objectStore('najemnici').count());
-  if (pocet > 0) return false;
+  // Jen jednou: když už nová databáze má nastavení nebo příznak převzetí, nikdy znovu
+  // (jinak by se po smazání všech nájemníků / obnově zálohy vrátila stará data z pilotu).
+  const tx0 = db.transaction(['najemnici', 'meta']);
+  const [pocet, nastaveni, prevzato] = await Promise.all([
+    pozadavek(tx0.objectStore('najemnici').count()),
+    pozadavek(tx0.objectStore('meta').get('nastaveni')),
+    pozadavek(tx0.objectStore('meta').get('pilotPrevzat')),
+  ]);
+  if (pocet > 0 || nastaveni || prevzato) return false;
   const existujici = (await indexedDB.databases?.()) ?? [];
   if (!existujici.some(d => d.name === 'najemnik')) return false;
 
@@ -102,9 +109,12 @@ export async function prevezmiZPilotu(): Promise<boolean> {
       pozadavek(tx.objectStore('platby').getAll()),
       pozadavek(tx.objectStore('meta').get('posledniZaloha')),
     ]);
+    await zapis(['meta'], tx => { tx.objectStore('meta').put(true, 'pilotPrevzat'); });
     if (!najemnici.length) return false;
+    // Platby bez nájemníka (z pilotu) nepřebírat – zálohu s nimi by pak nešlo obnovit.
+    const ids = new Set(najemnici.map(n => (n as { id: string }).id));
     await davka({
-      uloz: { najemnici, platby },
+      uloz: { najemnici, platby: platby.filter(p => ids.has((p as { najemnikId: string }).najemnikId)) },
       nastaveni: { ...vychoziNastaveni(), posledniZaloha: (posledniZaloha as string) ?? null },
     });
     return true;

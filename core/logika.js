@@ -207,7 +207,14 @@ export function vytvorZalohu(data, cas) {
   return z;
 }
 
-// Zkontroluje soubor zálohy; vrací { najemnici, platby, vydaje, upominky, nastaveni }, nebo vyhodí chybu s českou zprávou.
+// Zkontroluje soubor zálohy; vrací { najemnici, platby, vydaje, upominky, nastaveni, varovani },
+// nebo vyhodí chybu s českou zprávou. Poškozená data, která by aplikaci shodila, se odmítnou;
+// záznamy bez existujícího nájemníka (osiřelé) se vynechají a oznámí ve „varovani“.
+const MESIC = /^\d{4}-\d{2}$/;
+const DATUM = /^\d{4}-\d{2}-\d{2}$/;
+const jeCislo = x => Number.isInteger(x) && x >= 0;
+const pole = x => (Array.isArray(x) ? x : []);
+
 export function nactiZalohu(text) {
   let z;
   try { z = JSON.parse(text); } catch { throw new Error('Soubor není záloha Nájemníka (neplatný formát).'); }
@@ -215,25 +222,46 @@ export function nactiZalohu(text) {
     throw new Error('Soubor není záloha Nájemníka.');
   }
   if (z.verze > ZALOHA_VERZE) throw new Error('Záloha je z novější verze aplikace – nejdřív aplikaci aktualizujte.');
+  const poskozeny = co => { throw new Error(`Záloha obsahuje poškozen${co} – obnova by aplikaci rozbila.`); };
+
   const ids = new Set();
   for (const n of z.najemnici) {
-    if (!n.id || !n.jmeno || !/^\d{4}-\d{2}$/.test(n.zacatek) || !Array.isArray(n.predpisy)) {
-      throw new Error('Záloha obsahuje poškozeného nájemníka.');
+    const predpisyOk = Array.isArray(n?.predpisy) && n.predpisy.length > 0 && n.predpisy.every(pr =>
+      MESIC.test(pr?.od) && Array.isArray(pr.slozky) && pr.slozky.every(sl => jeCislo(sl?.castka)));
+    const upravyOk = n?.upravy === undefined || (Array.isArray(n.upravy) && n.upravy.every(u => MESIC.test(u?.mesic) && jeCislo(u.castka)));
+    if (typeof n?.id !== 'string' || typeof n.jmeno !== 'string' || !n.jmeno || !MESIC.test(n.zacatek)
+      || !(n.konec === null || n.konec === undefined || MESIC.test(n.konec)) || !predpisyOk || !upravyOk) {
+      poskozeny(`ého nájemníka (${n?.jmeno ?? '?'})`);
     }
+    if (ids.has(n.id)) poskozeny('ého nájemníka (dvakrát stejné id)');
     ids.add(n.id);
   }
-  const kontrola = (seznam, nazev) => {
-    for (const p of seznam) {
-      if (!p.id || !ids.has(p.najemnikId) || !/^\d{4}-\d{2}-\d{2}$/.test(p.datum) || (nazev !== 'upomínku' && !Number.isInteger(p.castka))) {
-        throw new Error(`Záloha obsahuje poškozenou ${nazev}.`);
-      }
+
+  const varovani = [];
+  const vyber = (seznam, nazev, platny) => {
+    const ok = [];
+    let osirele = 0;
+    for (const x of seznam) {
+      if (typeof x?.id !== 'string' || !DATUM.test(x.datum) || !platny(x)) poskozeny(`ou ${nazev}`);
+      if (ids.has(x.najemnikId)) ok.push(x); else osirele++;
     }
+    if (osirele) varovani.push(`Vynecháno ${osirele} × ${nazev} bez nájemníka.`);
+    return ok;
   };
-  kontrola(z.platby, 'platbu');
-  kontrola(z.vydaje ?? [], 'položku výdaje');
-  kontrola(z.upominky ?? [], 'upomínku');
-  return {
-    najemnici: z.najemnici, platby: z.platby, vydaje: z.vydaje ?? [], upominky: z.upominky ?? [],
-    nastaveni: z.nastaveni ?? {},
-  };
+  const platby = vyber(z.platby, 'platbu', x => Number.isInteger(x.castka) && (x.zaMesic === undefined || MESIC.test(x.zaMesic)));
+  const vydaje = vyber(pole(z.vydaje), 'položku výdaje', x => Number.isInteger(x.castka));
+  const upominky = vyber(pole(z.upominky), 'upomínku', () => true);
+
+  // Nastavení: jen známé položky ve správném tvaru, zbytek doplní aplikace výchozími hodnotami.
+  const n = z.nastaveni && typeof z.nastaveni === 'object' ? z.nastaveni : {};
+  const nastaveni = {};
+  if (Array.isArray(n.sablony) && n.sablony.every(s => typeof s?.id === 'string' && typeof s.text === 'string')) nastaveni.sablony = n.sablony;
+  if (Array.isArray(n.ucty) && n.ucty.every(u => typeof u?.ucet === 'string')) nastaveni.ucty = n.ucty;
+  if (Array.isArray(n.importy)) nastaveni.importy = n.importy.filter(i => i && typeof i.soubor === 'string');
+  if (n.pravidla && typeof n.pravidla === 'object') {
+    nastaveni.pravidla = { nenajemUcty: pole(n.pravidla.nenajemUcty), ignorovane: pole(n.pravidla.ignorovane) };
+  }
+  if (typeof n.posledniZaloha === 'string' && DATUM.test(n.posledniZaloha)) nastaveni.posledniZaloha = n.posledniZaloha;
+
+  return { najemnici: z.najemnici, platby, vydaje, upominky, nastaveni, varovani };
 }

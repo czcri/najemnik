@@ -2,6 +2,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import * as db from './db';
 import { vychoziNastaveni } from './vychozi';
+import { vymazKoncepty } from '../lib/pamet';
 import { stavNajemnika, souhrn, aktualniNajem, jeUkonceny } from '../lib/core';
 import { dnes as dnesniDatum } from '../lib/format';
 import type { Data, Najemnik, Nastaveni, Platba, Stav, Upominka, Vydaj } from '../types';
@@ -72,14 +73,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const s = <A extends unknown[]>(f: (...a: A) => Promise<unknown>) => async (...a: A) => { await f(...a); await obnov(); };
     return {
       ulozNajemnika: s((n: Najemnik) => db.uloz('najemnici', n)),
-      smazNajemnika: s(async (id: string) => db.smazNajemnika(id, await db.nactiVse())),
+      smazNajemnika: s(async (id: string) => { await db.smazNajemnika(id, await db.nactiVse()); vymazKoncepty(); }),
       ulozPlatbu: s((p: Platba) => db.uloz('platby', p)),
       smazPlatbu: s((id: string) => db.smaz('platby', id)),
       ulozVydaj: s((v: Vydaj) => db.uloz('vydaje', v)),
       smazVydaj: s((id: string) => db.smaz('vydaje', id)),
       pridejUpominku: s((u: Upominka) => db.uloz('upominky', u)),
       ulozNastaveni: s((n: Nastaveni) => db.ulozNastaveni(n)),
-      nahradVse: s((d: Data) => db.nahradVse(d)),
+      nahradVse: s(async (d: Data) => { await db.nahradVse(d); vymazKoncepty(); }),
       davka: s(db.davka) as typeof db.davka,
     };
   }, [obnov]);

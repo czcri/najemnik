@@ -4,6 +4,7 @@ import { DataProvider, useData } from './data/store';
 import { ToastProvider, useToast } from './components/ui';
 import { maKoncept } from './lib/pamet';
 import { Uvod } from './components/Uvod';
+import { Zachrana } from './components/Zachrana';
 import Prehled from './screens/Prehled';
 import Najemnici from './screens/Najemnici';
 import Detail from './screens/Detail';
@@ -56,6 +57,7 @@ function Obrazovky() {
 
 export default function App() {
   return (
+    <Zachrana>
     <HashRouter>
       <Posun />
       <DataProvider>
@@ -66,5 +68,6 @@ export default function App() {
         </ToastProvider>
       </DataProvider>
     </HashRouter>
+    </Zachrana>
   );
 }

@@ -168,12 +168,12 @@ test('7: záloha tam a zpět, poškozená záloha se odmítne', () => {
   const n = [test1()];
   const p = [platba('p1', '2026-10-05', 10000)];
   const text = JSON.stringify(vytvorZalohu({ najemnici: n, platby: p }, '2026-11-01T10:00:00Z'));
-  assert.deepEqual(nactiZalohu(text), { najemnici: n, platby: p, vydaje: [], upominky: [], nastaveni: {} });
+  assert.deepEqual(nactiZalohu(text), { najemnici: n, platby: p, vydaje: [], upominky: [], nastaveni: {}, varovani: [] });
   assert.throws(() => nactiZalohu('{"a":1}'), /není záloha/);
   assert.throws(() => nactiZalohu('nesmysl'), /není záloha/);
   const spatna = JSON.parse(text);
   spatna.platby[0].najemnikId = 'neexistuje';
-  assert.throws(() => nactiZalohu(JSON.stringify(spatna)), /poškozenou platbu/);
+  assert.equal(nactiZalohu(JSON.stringify(spatna)).platby.length, 0, 'platba bez nájemníka se vynechá');
 });
 
 test('návrh platby: za který měsíc a kolik', () => {

@@ -2,39 +2,60 @@
 // usePamet funguje jako useState, ale hodnotu průběžně ukládá do localStorage.
 // Při zavření formuláře / odchodu z obrazovky (odpojení komponenty) se koncept smaže;
 // při ukončení aplikace se odpojení nestihne, takže koncept zůstane a po návratu se obnoví.
+// „otisk“ = podoba upravovaného záznamu v okamžiku, kdy úprava začala: když se záznam mezitím
+// změnil nebo zmizel (smazání, import, obnova ze zálohy), starý koncept se zahodí a nic nepřepíše.
 import { useEffect, useState } from 'react';
 
 const PREFIX = 'koncept:';
 const MAX_STARI_MS = 24 * 3600 * 1000;
 
-function nacti<T>(klic: string): T | undefined {
+type Zaznam<T> = { cas: number; v: T; o?: string };
+
+function precti<T>(klic: string): Zaznam<T> | null {
   try {
-    const z = JSON.parse(localStorage.getItem(PREFIX + klic) ?? 'null') as { cas: number; v: T } | null;
-    if (z && Date.now() - z.cas < MAX_STARI_MS) return z.v;
+    const z = JSON.parse(localStorage.getItem(PREFIX + klic) ?? 'null') as Zaznam<T> | null;
+    if (z && Date.now() - z.cas < MAX_STARI_MS) return z;
   } catch { /* soukromý režim apod. – bez obnovy */ }
-  return undefined;
+  return null;
 }
 
-function uloz(klic: string, v: unknown) {
+function uloz(klic: string, v: unknown, otisk?: string) {
   try {
     if (v === null || v === undefined || v === false) localStorage.removeItem(PREFIX + klic);
-    else localStorage.setItem(PREFIX + klic, JSON.stringify({ cas: Date.now(), v }));
+    else localStorage.setItem(PREFIX + klic, JSON.stringify({ cas: Date.now(), v, o: otisk }));
   } catch { /* plné úložiště – nevadí */ }
 }
 
-export function usePamet<T>(klic: string, vychozi: T | (() => T)) {
+// Otisk záznamu pro usePamet (stabilní řetězec).
+export const otisk = (x: unknown) => JSON.stringify(x ?? null);
+
+export function usePamet<T>(klic: string, vychozi: T | (() => T), otiskZaznamu?: string) {
   const [v, setV] = useState<T>(() => {
-    const ulozeno = nacti<T>(klic);
-    return ulozeno !== undefined ? ulozeno : typeof vychozi === 'function' ? (vychozi as () => T)() : vychozi;
+    const z = precti<T>(klic);
+    if (z && (otiskZaznamu === undefined || z.o === otiskZaznamu)) return z.v;
+    return typeof vychozi === 'function' ? (vychozi as () => T)() : vychozi;
   });
-  useEffect(() => { uloz(klic, v); }, [klic, v]);
+  useEffect(() => { uloz(klic, v, otiskZaznamu); }, [klic, v, otiskZaznamu]);
   useEffect(() => () => uloz(klic, null), [klic]);
   return [v, setV] as const;
 }
 
-// Je při spuštění co obnovit? (pro hlášku a přeskočení úvodní obrazovky)
+// Je při spuštění co obnovit? Zároveň uklidí prošlé koncepty (obsahují i osobní údaje).
 export function maKoncept() {
   try {
-    return Object.keys(localStorage).some(k => k.startsWith(PREFIX) && nacti(k.slice(PREFIX.length)) !== undefined);
+    let neco = false;
+    for (const k of Object.keys(localStorage)) {
+      if (!k.startsWith(PREFIX)) continue;
+      if (precti(k.slice(PREFIX.length))) neco = true;
+      else localStorage.removeItem(k);
+    }
+    return neco;
   } catch { return false; }
+}
+
+// Po obnově ze zálohy / smazání nájemníka: zahodit všechny rozpracované zápisy.
+export function vymazKoncepty() {
+  try {
+    for (const k of Object.keys(localStorage)) if (k.startsWith(PREFIX)) localStorage.removeItem(k);
+  } catch { /* nevadí */ }
 }

@@ -186,8 +186,10 @@ function Zaloha() {
   async function obnov(f: File | undefined) {
     if (!f) return;
     try {
-      const z = await prectiZalohu(f);
-      if (!confirm(`Obnovit ze zálohy ${f.name}?\n\n${z.najemnici.length} nájemníků, ${z.platby.length} plateb.\nSoučasná data se NAHRADÍ.`)) return;
+      const { data: z, varovani } = await prectiZalohu(f);
+      const pocty = (d: typeof z) => `${d.najemnici.length} nájemníků, ${d.platby.length} plateb, ${d.vydaje.length} výdajů, ${d.upominky.length} upomínek`;
+      if (!confirm(`Obnovit ze zálohy ${f.name}?\n\nV záloze: ${pocty(z)} + nastavení (šablony, účty).\nTeď v telefonu: ${pocty(data)}.\n\nSoučasná data se NAHRADÍ. Před obnovou se jejich záloha automaticky uloží do Stažených souborů.${varovani.length ? `\n\nPozor: ${varovani.join(' ')}` : ''}`)) return;
+      if (data.najemnici.length || data.platby.length) stahniZalohu(data);
       await akce.nahradVse(z);
       toast('Data obnovena ze zálohy');
     } catch (e) {

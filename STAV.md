@@ -86,3 +86,7 @@ Odloženo: widget na plochu + skutečné notifikace (nativní obal Capacitor/APK
 ## 2026-10-29 – verze 2.6
 
 - Platby: záložky Přijato v měsíci (výchozí) / Za měsíc. Dlužníci: Celkem / Za měsíc / V měsíci s výběrem měsíce (spec. kap. 19).
+
+## 2026-10-29 – verze 2.7 (revize, blok 1 – bezpečnost dat)
+
+- Viz spec. kap. 20, blok 1.

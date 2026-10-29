@@ -1,7 +1,7 @@
 import { useMemo, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { Banknote, CheckCircle2, Landmark, Search } from 'lucide-react';
-import { AppShell, Chyba, Main, NapovedaCastky, Pole, Prepinac, Tlacitko, VSTUP, VolbaMesice, ZpusobIkona, useToast } from '../components/ui';
+import { AppShell, Chyba, Main, NapovedaCastky, Pole, Prepinac, Tlacitko, VSTUP, VolbaMesice, ZpusobIkona, useChrana, useToast } from '../components/ui';
 import { vysledekPoPlatbe } from '../components/formulare';
 import { useData } from '../data/store';
 import { aktualniNajem, mesicZData, navrhPlatby, parseCastka, stavNajemnika } from '../lib/core';
@@ -13,6 +13,7 @@ const bezDiakritiky = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').
 export default function VlozitPlatbu() {
   const { data, dnes, prehled, akce } = useData();
   const toast = useToast();
+  const [busy, chran] = useChrana();
   const aktivni = prehled.filter(r => !r.ukonceny);
   const [id, setId] = usePamet('vlozit:id', aktivni.find(r => r.dluh + r.tentoMesic > 0)?.najemnik.id ?? aktivni[0]?.najemnik.id ?? '');
   const [hledat, setHledat] = useState('');
@@ -74,7 +75,7 @@ export default function VlozitPlatbu() {
   return (
     <AppShell title="Vložit platbu" subtitle="Rychlý zápis">
       <Main>
-        <form onSubmit={uloz} className="space-y-5">
+        <form onSubmit={chran(uloz)} className="space-y-5">
           <div>
             <p className="mb-2 px-2 text-sm font-bold text-muted-foreground">Nájemník</p>
             {r && !hledat && (
@@ -125,7 +126,7 @@ export default function VlozitPlatbu() {
             <Pole label="Poznámka"><input value={poznamka} onChange={e => setPoznamka(e.target.value)} placeholder="nepovinné" className={VSTUP} /></Pole>
           </div>
           <Chyba text={chyba} />
-          <Tlacitko type="submit" disabled={!r}>Uložit platbu</Tlacitko>
+          <Tlacitko type="submit" disabled={!r || busy}>Uložit platbu</Tlacitko>
         </form>
       </Main>
     </AppShell>

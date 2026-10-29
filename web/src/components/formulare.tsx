@@ -4,9 +4,9 @@ import { Banknote, Landmark, Plus, Trash2 } from 'lucide-react';
 import { useData } from '../data/store';
 import { aktualniNajem, castkaPredpisu, mesicZData, nastavUpravu, navrhPlatby, normalizujUcet, obdobiPlatby, parseCastka, standardniNajem, upravaVMesici, zmenNajem } from '../lib/core';
 import { NazevMesice, datumCz, kc, nazevMesice, noveId, odMesice, posunMesic } from '../lib/format';
-import { Chyba, NapovedaCastky, Panel, Pole, Prepinac, Tlacitko, VSTUP, VolbaMesice, useToast } from './ui';
+import { Chyba, NapovedaCastky, Panel, Pole, Prepinac, Tlacitko, VSTUP, VolbaMesice, useChrana, useToast } from './ui';
 import type { Najemnik, Platba, Vydaj, Zpusob } from '../types';
-import { usePamet } from '../lib/pamet';
+import { otisk, usePamet } from '../lib/pamet';
 
 const BANKY: Record<string, string> = { fio: 'Fio', cs: 'Česká spořitelna', kb: 'Komerční banka' };
 const ZPUSOBY = [{ k: 'prevod' as const, l: 'Převodem', i: Landmark }, { k: 'hotove' as const, l: 'Hotově', i: Banknote }];
@@ -21,19 +21,20 @@ export function vysledekPoPlatbe(s: { dluh: number; tentoMesic: number; preplate
 export function FormPlatba({ najemnik, platba, onClose }: { najemnik: Najemnik; platba?: Platba; onClose: () => void }) {
   const { akce, dnes, data } = useData();
   const toast = useToast();
+  const [busy, chran] = useChrana();
   // Nová platba: za nejstarší nezaplacený / běžný (u „dopředu“ příští) měsíc; pravidelný nájem, nebo doplatek.
   const platbyNajemnika = data.platby.filter(p => p.najemnikId === najemnik.id && p.id !== platba?.id);
   const vydajeNajemnika = data.vydaje.filter(v => v.najemnikId === najemnik.id);
   const navrhZa = (m?: string) => navrhPlatby(najemnik, platbyNajemnika, dnes, vydajeNajemnika, m);
   const k = `platba:${najemnik.id}:${platba?.id ?? 'nova'}`;
-  const [zaMesic, setZaMesic] = usePamet(`${k}:zaMesic`, platba ? obdobiPlatby(platba, najemnik) : navrhZa().zaMesic);
+  const [zaMesic, setZaMesic] = usePamet(`${k}:zaMesic`, platba ? obdobiPlatby(platba, najemnik) : navrhZa().zaMesic, otisk(platba));
   const navrh = navrhZa(zaMesic);
   const predvyplneno = navrh.castka;
-  const [datum, setDatum] = usePamet(`${k}:datum`, platba?.datum ?? dnes);
-  const [castka, setCastka] = usePamet(`${k}:castka`, String(platba?.castka ?? predvyplneno));
+  const [datum, setDatum] = usePamet(`${k}:datum`, platba?.datum ?? dnes, otisk(platba));
+  const [castka, setCastka] = usePamet(`${k}:castka`, String(platba?.castka ?? predvyplneno), otisk(platba));
   const [zpusob, setZpusob] = usePamet<'prevod' | 'hotove'>(`${k}:zpusob`, 
-    platba?.zdroj?.typ === 'hotove' ? 'hotove' : platba?.zdroj?.typ === 'prevod' ? 'prevod' : najemnik.zpusobPlaceni === 'hotove' ? 'hotove' : 'prevod');
-  const [poznamka, setPoznamka] = usePamet(`${k}:poznamka`, platba?.poznamka ?? '');
+    platba?.zdroj?.typ === 'hotove' ? 'hotove' : platba?.zdroj?.typ === 'prevod' ? 'prevod' : najemnik.zpusobPlaceni === 'hotove' ? 'hotove' : 'prevod', otisk(platba));
+  const [poznamka, setPoznamka] = usePamet(`${k}:poznamka`, platba?.poznamka ?? '', otisk(platba));
   const [chyba, setChyba] = useState<string | null>(null);
   const zVypisu = platba?.zdroj?.typ === 'vypis' ? platba.zdroj : null;
 
@@ -58,7 +59,7 @@ export function FormPlatba({ najemnik, platba, onClose }: { najemnik: Najemnik; 
 
   return (
     <Panel title={platba ? 'Upravit platbu' : `Platba · ${najemnik.jmeno}`} onClose={onClose}>
-      <form onSubmit={uloz} className="space-y-4">
+      <form onSubmit={chran(uloz)} className="space-y-4">
         <Pole label="Částka">
           <div className="flex h-16 items-center rounded-2xl border border-border bg-card px-4 focus-within:border-primary">
             <input inputMode="numeric" value={castka} onChange={e => setCastka(e.target.value)} autoFocus={!platba}
@@ -80,7 +81,7 @@ export function FormPlatba({ najemnik, platba, onClose }: { najemnik: Najemnik; 
           : <Pole label="Způsob platby"><Prepinac hodnota={zpusob} volby={ZPUSOBY} onChange={setZpusob} /></Pole>}
         <Pole label="Poznámka"><input value={poznamka} onChange={e => setPoznamka(e.target.value)} maxLength={200} placeholder="nepovinné" className={VSTUP} /></Pole>
         <Chyba text={chyba} />
-        <Tlacitko type="submit">Uložit platbu</Tlacitko>
+        <Tlacitko type="submit" disabled={busy}>Uložit platbu</Tlacitko>
         {platba && <Tlacitko typ="nebezpecne" onClick={smaz}><Trash2 className="size-5" />Smazat platbu</Tlacitko>}
       </form>
     </Panel>
@@ -90,11 +91,12 @@ export function FormPlatba({ najemnik, platba, onClose }: { najemnik: Najemnik; 
 export function FormVydaj({ najemnik, vydaj, datumVychozi, onClose }: { najemnik: Najemnik; vydaj?: Vydaj; datumVychozi?: string; onClose: () => void }) {
   const { akce, dnes, data } = useData();
   const toast = useToast();
+  const [busy, chran] = useChrana();
   const prvni = !data.vydaje.some(v => v.najemnikId === najemnik.id) && !data.platby.some(p => p.najemnikId === najemnik.id);
   const k = `vydaj:${najemnik.id}:${vydaj?.id ?? 'novy'}`;
-  const [datum, setDatum] = usePamet(`${k}:datum`, vydaj?.datum ?? datumVychozi ?? dnes);
-  const [popis, setPopis] = usePamet(`${k}:popis`, vydaj?.popis ?? (prvni ? 'Počáteční dluh' : ''));
-  const [castka, setCastka] = usePamet(`${k}:castka`, vydaj ? String(vydaj.castka) : '');
+  const [datum, setDatum] = usePamet(`${k}:datum`, vydaj?.datum ?? datumVychozi ?? dnes, otisk(vydaj));
+  const [popis, setPopis] = usePamet(`${k}:popis`, vydaj?.popis ?? (prvni ? 'Počáteční dluh' : ''), otisk(vydaj));
+  const [castka, setCastka] = usePamet(`${k}:castka`, vydaj ? String(vydaj.castka) : '', otisk(vydaj));
   const [chyba, setChyba] = useState<string | null>(null);
 
   async function uloz(e: FormEvent) {
@@ -113,7 +115,7 @@ export function FormVydaj({ najemnik, vydaj, datumVychozi, onClose }: { najemnik
   }
   return (
     <Panel title={vydaj ? 'Upravit výdaj / dluh' : 'Výdaj / dluh'} onClose={onClose}>
-      <form onSubmit={uloz} className="space-y-4">
+      <form onSubmit={chran(uloz)} className="space-y-4">
         <p className="text-sm text-muted-foreground">Jednorázová částka, kterou má {najemnik.jmeno} zaplatit navíc k nájmu – oprava, doplatek, nebo dluh z doby před zahájením evidence.</p>
         <Pole label="Popis"><input value={popis} onChange={e => setPopis(e.target.value)} placeholder="Oprava bojleru" className={VSTUP} /></Pole>
         <Pole label="Částka (Kč)"><input inputMode="numeric" value={castka} onChange={e => setCastka(e.target.value)} className={VSTUP} /></Pole>
@@ -121,7 +123,7 @@ export function FormVydaj({ najemnik, vydaj, datumVychozi, onClose }: { najemnik
           <input type="date" value={datum} onChange={e => setDatum(e.target.value)} className={VSTUP} />
         </Pole>
         <Chyba text={chyba} />
-        <Tlacitko type="submit">Uložit</Tlacitko>
+        <Tlacitko type="submit" disabled={busy}>Uložit</Tlacitko>
         {vydaj && <Tlacitko typ="nebezpecne" onClick={smaz}><Trash2 className="size-5" />Smazat</Tlacitko>}
       </form>
     </Panel>
@@ -131,8 +133,9 @@ export function FormVydaj({ najemnik, vydaj, datumVychozi, onClose }: { najemnik
 export function FormNajem({ najemnik, onClose }: { najemnik: Najemnik; onClose: () => void }) {
   const { akce, dnes } = useData();
   const toast = useToast();
-  const [od, setOd] = usePamet(`najem:${najemnik.id}:od`, mesicZData(dnes) < najemnik.zacatek ? najemnik.zacatek : mesicZData(dnes));
-  const [castka, setCastka] = usePamet(`najem:${najemnik.id}:castka`, String(aktualniNajem(najemnik, dnes)));
+  const [busy, chran] = useChrana();
+  const [od, setOd] = usePamet(`najem:${najemnik.id}:od`, mesicZData(dnes) < najemnik.zacatek ? najemnik.zacatek : mesicZData(dnes), otisk(najemnik.predpisy));
+  const [castka, setCastka] = usePamet(`najem:${najemnik.id}:castka`, String(aktualniNajem(najemnik, dnes)), otisk(najemnik.predpisy));
   const [chyba, setChyba] = useState<string | null>(null);
   async function uloz(e: FormEvent) {
     e.preventDefault();
@@ -146,13 +149,13 @@ export function FormNajem({ najemnik, onClose }: { najemnik: Najemnik; onClose: 
   }
   return (
     <Panel title="Změnit nájem" onClose={onClose}>
-      <form onSubmit={uloz} className="space-y-4">
+      <form onSubmit={chran(uloz)} className="space-y-4">
         <Pole label="Od měsíce"><input type="month" value={od} onChange={e => setOd(e.target.value)} className={VSTUP} /></Pole>
         <Pole label="Nový nájem měsíčně vč. služeb (Kč)" napoveda="Dřívější měsíce se nezmění.">
           <input inputMode="numeric" value={castka} onChange={e => setCastka(e.target.value)} className={VSTUP} />
         </Pole>
         <Chyba text={chyba} />
-        <Tlacitko type="submit">Uložit</Tlacitko>
+        <Tlacitko type="submit" disabled={busy}>Uložit</Tlacitko>
         <div>
           <p className="mb-2 px-1 text-sm font-bold text-muted-foreground">Historie nájmu</p>
           <div className="card-soft-2 divide-y divide-border overflow-hidden">
@@ -169,16 +172,18 @@ export function FormNajem({ najemnik, onClose }: { najemnik: Najemnik; onClose: 
 export function FormNajemnik({ najemnik, onClose, onUlozeno }: { najemnik?: Najemnik; onClose: () => void; onUlozeno?: (id: string) => void }) {
   const { akce, dnes, data } = useData();
   const toast = useToast();
+  const [busy, chran] = useChrana();
   const k = `najemnik:${najemnik?.id ?? 'novy'}`;
+  const o = otisk(najemnik);
   const [f, setF] = usePamet(`${k}:pole`, {
     jmeno: najemnik?.jmeno ?? '', osloveni: najemnik?.osloveni ?? '', oznaceni: najemnik?.oznaceni ?? '',
     zacatek: najemnik?.zacatek ?? mesicZData(dnes), castka: '', telefon: najemnik?.telefon ?? '', email: najemnik?.email ?? '',
     vs: najemnik?.vs ?? '', poznamka: najemnik?.poznamka ?? '', konec: najemnik?.konec ?? '', platiDopredu: najemnik?.platiDopredu ? 'ano' : 'ne',
     ucetProPlatby: najemnik?.ucetProPlatby ?? '', denHotovosti: najemnik?.denHotovosti ? String(najemnik.denHotovosti) : '',
-  });
-  const [zpusob, setZpusob] = usePamet<Zpusob>(`${k}:zpusob`, najemnik?.zpusobPlaceni ?? 'ucet');
-  const [ucty, setUcty] = usePamet<string[]>(`${k}:ucty`, najemnik?.uctyPlatce ?? []);
-  const [novyUcet, setNovyUcet] = usePamet(`${k}:novyUcet`, '');
+  }, o);
+  const [zpusob, setZpusob] = usePamet<Zpusob>(`${k}:zpusob`, najemnik?.zpusobPlaceni ?? 'ucet', o);
+  const [ucty, setUcty] = usePamet<string[]>(`${k}:ucty`, najemnik?.uctyPlatce ?? [], o);
+  const [novyUcet, setNovyUcet] = usePamet(`${k}:novyUcet`, '', o);
   const [chyba, setChyba] = useState<string | null>(null);
   const zmen = (k: keyof typeof f) => (e: { target: { value: string } }) => setF({ ...f, [k]: e.target.value });
 
@@ -232,7 +237,7 @@ export function FormNajemnik({ najemnik, onClose, onUlozeno }: { najemnik?: Naje
 
   return (
     <Panel title={najemnik ? 'Upravit nájemníka' : 'Nový nájemník'} onClose={onClose}>
-      <form onSubmit={uloz} className="space-y-4">
+      <form onSubmit={chran(uloz)} className="space-y-4">
         <Pole label="Jméno"><input value={f.jmeno} onChange={zmen('jmeno')} autoFocus={!najemnik} className={VSTUP} /></Pole>
         <Pole label="Způsob placení"><Prepinac hodnota={zpusob} onChange={setZpusob}
           volby={[{ k: 'ucet', l: 'Na účet', i: Landmark }, { k: 'hotove', l: 'Hotově', i: Banknote }]} /></Pole>
@@ -285,7 +290,7 @@ export function FormNajemnik({ najemnik, onClose, onUlozeno }: { najemnik?: Naje
         )}
         <Pole label="Poznámka"><textarea value={f.poznamka} onChange={zmen('poznamka')} rows={2} className={`${VSTUP} h-auto py-3`} /></Pole>
         <Chyba text={chyba} />
-        <Tlacitko type="submit">Uložit</Tlacitko>
+        <Tlacitko type="submit" disabled={busy}>Uložit</Tlacitko>
         {najemnik && <Tlacitko typ="nebezpecne" onClick={smaz}><Trash2 className="size-5" />Smazat nájemníka</Tlacitko>}
       </form>
     </Panel>
@@ -296,12 +301,13 @@ export function FormNajemnik({ najemnik, onClose, onUlozeno }: { najemnik?: Naje
 export function PanelMesice({ najemnik, mesic, onClose, onVydaj }: { najemnik: Najemnik; mesic: string; onClose: () => void; onVydaj: (datum: string) => void }) {
   const { akce, dnes, data } = useData();
   const toast = useToast();
+  const [busy, chran] = useChrana();
   const standard = standardniNajem(najemnik, mesic);
   const uprava = upravaVMesici(najemnik, mesic);
   const k = `mesic:${najemnik.id}:${mesic}`;
-  const [castka, setCastka] = usePamet(`${k}:castka`, String(uprava?.castka ?? standard));
-  const [duvod, setDuvod] = usePamet(`${k}:duvod`, uprava?.duvod ?? '');
-  const [doMesice, setDoMesice] = usePamet(`${k}:do`, '');
+  const [castka, setCastka] = usePamet(`${k}:castka`, String(uprava?.castka ?? standard), otisk(najemnik.upravy));
+  const [duvod, setDuvod] = usePamet(`${k}:duvod`, uprava?.duvod ?? '', otisk(najemnik.upravy));
+  const [doMesice, setDoMesice] = usePamet(`${k}:do`, '', otisk(najemnik.upravy));
   const [chyba, setChyba] = useState<string | null>(null);
   const vydaje = data.vydaje.filter(v => v.najemnikId === najemnik.id && mesicZData(v.datum) === mesic);
 
@@ -322,7 +328,7 @@ export function PanelMesice({ najemnik, mesic, onClose, onVydaj }: { najemnik: N
 
   return (
     <Panel title={`${NazevMesice(mesic)} – měl zaplatit`} onClose={onClose}>
-      <form onSubmit={uloz} className="space-y-4">
+      <form onSubmit={chran(uloz)} className="space-y-4">
         <p className="text-sm text-muted-foreground">Standardní nájem v tomto měsíci: <b className="text-foreground">{kc(standard)}</b>{mesic > mesicZData(dnes) ? ' · budoucí měsíc' : ''}</p>
         <Pole label="Nájem za tento měsíc (Kč)" napoveda="Dohodnutá částka jen pro tento měsíc, např. sleva. Standardní nájem se nemění.">
           <div className="flex h-16 items-center rounded-2xl border border-border bg-card px-4 focus-within:border-primary">
@@ -335,7 +341,7 @@ export function PanelMesice({ najemnik, mesic, onClose, onVydaj }: { najemnik: N
           <input type="month" value={doMesice} min={mesic} onChange={e => setDoMesice(e.target.value)} className={VSTUP} />
         </Pole>
         <Chyba text={chyba} />
-        <Tlacitko type="submit">Uložit</Tlacitko>
+        <Tlacitko type="submit" disabled={busy}>Uložit</Tlacitko>
         {uprava && <Tlacitko typ="vedlejsi" onClick={vratit}>Vrátit standardní nájem ({kc(standard)})</Tlacitko>}
         <div>
           <p className="mb-2 px-1 text-sm font-bold text-muted-foreground">Výdaje v tomto měsíci</p>

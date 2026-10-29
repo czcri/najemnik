@@ -40,9 +40,9 @@ test('záloha v2 tam a zpět; záloha v1 z pilotu se načte', () => {
     upominky: [{ id: 'u', najemnikId: 'a', datum: '2026-10-20', kanal: 'sms', text: 'Dobrý den' }],
     nastaveni: { sablony: [{ id: 's', nazev: 'A', text: 'B' }] },
   };
-  assert.deepEqual(nactiZalohu(JSON.stringify(vytvorZalohu(data, 'x'))), data);
+  assert.deepEqual(nactiZalohu(JSON.stringify(vytvorZalohu(data, 'x'))), { ...data, varovani: [] });
   const v1 = { aplikace: 'najemnik', verze: 1, najemnici: data.najemnici, platby: data.platby };
-  assert.deepEqual(nactiZalohu(JSON.stringify(v1)), { ...data, vydaje: [], upominky: [], nastaveni: {} });
+  assert.deepEqual(nactiZalohu(JSON.stringify(v1)), { ...data, vydaje: [], upominky: [], nastaveni: {}, varovani: [] });
 });
 
 test('způsob platby podle zdroje, jinak podle nájemníka', () => {
@@ -105,4 +105,19 @@ test('statistiky: filtr Hotově a filtr nemovitosti', () => {
 
 test('statistiky: období v budoucnu se ořízne na aktuální měsíc', () => {
   assert.equal(statistiky(DATA, '2026-10', '2027-06', '2026-11-01').mesice.length, 2);
+});
+
+test('obnova: poškozená data odmítnout, osiřelé záznamy vynechat, nastavení očistit', () => {
+  const zaklad = { aplikace: 'najemnik', verze: 2, najemnici: [najem('a', 10000)], platby: [], vydaje: [], upominky: [] };
+  const z = (zmena) => JSON.stringify({ ...zaklad, ...zmena });
+  assert.throws(() => nactiZalohu(z({ najemnici: [{ ...najem('a', 1), predpisy: [{}] }] })), /poškozen/);
+  assert.throws(() => nactiZalohu(z({ najemnici: [{ ...najem('a', 1), upravy: [{ mesic: 'x', castka: 1 }] }] })), /poškozen/);
+  assert.throws(() => nactiZalohu(z({ platby: [{ id: 'p', najemnikId: 'a', datum: '2026-10-01', castka: '5' }] })), /poškozen/);
+  const r = nactiZalohu(z({
+    platby: [{ id: 'p', najemnikId: 'a', datum: '2026-10-01', castka: 5 }, { id: 'q', najemnikId: 'cizi', datum: '2026-10-01', castka: 5 }],
+    nastaveni: { importy: 'x', pravidla: { nenajemUcty: ['1/0800'] }, sablony: [{ id: 's', nazev: 'A', text: 'B' }] },
+  }));
+  assert.deepEqual(r.platby.map(p => p.id), ['p']);
+  assert.match(r.varovani[0], /Vynecháno 1 × platbu/);
+  assert.deepEqual(r.nastaveni, { pravidla: { nenajemUcty: ['1/0800'], ignorovane: [] }, sablony: [{ id: 's', nazev: 'A', text: 'B' }] });
 });
