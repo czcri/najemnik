@@ -76,13 +76,13 @@ export default function Statistiky() {
         </div>
 
         <section className="card-navy p-5">
-          <p className="text-sm opacity-70">Přijato za období</p>
+          <p className="text-sm opacity-70">Přišlo za období</p>
           <p className="text-[34px] leading-tight font-extrabold tabular">{kc(st.prijato)}</p>
           {zpusob === 'vse' && <p className="mt-1 text-xs opacity-80 tabular">na účet {kc(st.prijatoUcet)} · hotově {kc(st.prijatoHotove)}</p>}
           <div className="mt-4 grid grid-cols-3 gap-2 text-center">
             <div className="rounded-2xl bg-white/5 p-2.5"><p className="text-[11px] opacity-60">Očekáváno</p><p className="text-sm font-bold tabular">{kc(st.ocekavano)}</p></div>
-            <div className="rounded-2xl bg-white/5 p-2.5"><p className="text-[11px] opacity-60">Úspěšnost</p><p className="text-sm font-bold tabular">{st.uspesnost === null ? '—' : `${Math.round(st.uspesnost * 100)} %`}</p></div>
-            <div className="rounded-2xl bg-white/5 p-2.5"><p className="text-[11px] opacity-60">Dluh teď</p><p className={`text-sm font-bold tabular ${st.dluh ? 'text-[oklch(0.75_0.16_25)]' : ''}`}>{kc(st.dluh)}</p></div>
+            <div className="rounded-2xl bg-white/5 p-2.5"><p className="text-[11px] opacity-60">Vybráno</p><p className="text-sm font-bold tabular">{st.uspesnost === null ? '—' : `${Math.round(st.uspesnost * 100)} %`}</p></div>
+            <div className="rounded-2xl bg-white/5 p-2.5"><p className="text-[11px] opacity-60">Po splatnosti</p><p className={`text-sm font-bold tabular ${st.dluh ? 'text-[oklch(0.75_0.16_25)]' : ''}`}>{kc(st.dluh)}</p></div>
           </div>
         </section>
 

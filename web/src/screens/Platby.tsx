@@ -8,7 +8,7 @@ import { mesicZData, obdobiPlatby, zpusobPlatby } from '../lib/core';
 import { NazevMesice, datumCz, datumKratce, kc, nazevMesice, pocet } from '../lib/format';
 import type { Najemnik, Platba } from '../types';
 
-// Dvě záložky: „Přijato v měsíci“ (podle data přijetí, výchozí) a „Za měsíc“ (podle měsíce, za který platba je).
+// Dvě záložky: „Přišlo v měsíci“ (podle data přijetí, výchozí) a „Za měsíc“ (podle měsíce, za který platba je).
 export default function Platby() {
   const { data, dnes } = useData();
   const aktualni = mesicZData(dnes);
@@ -25,7 +25,7 @@ export default function Platby() {
         {mesic !== aktualni && (
           <button onClick={() => setMesic(aktualni)} className="-mt-2 mb-4 w-full text-center text-sm font-semibold text-primary">Zpět na aktuální měsíc</button>
         )}
-        <Zalozky hodnota={zalozka} onChange={setZalozka} volby={[{ k: 'prijato', l: 'Přijato v měsíci' }, { k: 'za', l: 'Za měsíc' }]} />
+        <Zalozky hodnota={zalozka} onChange={setZalozka} volby={[{ k: 'prijato', l: 'Přišlo v měsíci' }, { k: 'za', l: 'Za měsíc' }]} />
         {zalozka === 'prijato' ? <PrijatoVMesici mesic={mesic} podleId={podleId} /> : <ZaMesic mesic={mesic} podleId={podleId} />}
       </Main>
     </AppShell>
@@ -62,7 +62,7 @@ function PrijatoVMesici({ mesic, podleId }: { mesic: string; podleId: Map<string
         <p className="text-[34px] leading-tight font-extrabold tabular">{kc(ucet + hotove)}</p>
         <p className="mt-2 text-sm opacity-80 tabular">na účet {kc(ucet)} · hotově {kc(hotove)} · {pocet(platby.length, 'platba', 'platby', 'plateb')}</p>
       </section>
-      <Nadpis>Přijaté platby · {NazevMesice(mesic)}</Nadpis>
+      <Nadpis>Co přišlo · {NazevMesice(mesic)}</Nadpis>
       <Card>
         {platby.length === 0 && <p className="p-6 text-center text-sm text-muted-foreground">V tomto měsíci zatím nic nepřišlo.</p>}
         {platby.map(p => <RadekPlatby key={p.id} p={p} n={podleId.get(p.najemnikId)} mesic={mesic} ukazZa />)}

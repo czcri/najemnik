@@ -11,11 +11,12 @@ import { otisk, usePamet } from '../lib/pamet';
 const BANKY: Record<string, string> = { fio: 'Fio', cs: 'Česká spořitelna', kb: 'Komerční banka' };
 const ZPUSOBY = [{ k: 'prevod' as const, l: 'Převodem', i: Landmark }, { k: 'hotove' as const, l: 'Hotově', i: Banknote }];
 
+// Výsledek po zapsání platby: dluh po splatnosti (červeně) zvlášť od běžného měsíce (ještě není dluh).
 export function vysledekPoPlatbe(s: { dluh: number; tentoMesic: number; preplatek: number }) {
-  const zbyva = s.dluh + s.tentoMesic;
-  if (zbyva > 0) return { text: `Zbývá dluh ${kc(zbyva)}`, ok: false };
-  if (s.preplatek > 0) return { text: `Přeplatek ${kc(s.preplatek)}`, ok: true };
-  return { text: 'Vše uhrazeno ✓', ok: true };
+  if (s.dluh > 0) return { text: `Dluh po splatnosti ${kc(s.dluh)}`, dalsi: s.tentoMesic ? `+ tento měsíc chybí ${kc(s.tentoMesic)}` : '', ok: false, dluh: true };
+  if (s.tentoMesic > 0) return { text: `Tento měsíc chybí ${kc(s.tentoMesic)}`, dalsi: 'splatné do konce měsíce', ok: false, dluh: false };
+  if (s.preplatek > 0) return { text: `Přeplatek ${kc(s.preplatek)}`, dalsi: '', ok: true, dluh: false };
+  return { text: 'Vše uhrazeno ✓', dalsi: '', ok: true, dluh: false };
 }
 
 export function FormPlatba({ najemnik, platba, onClose }: { najemnik: Najemnik; platba?: Platba; onClose: () => void }) {

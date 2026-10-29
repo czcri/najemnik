@@ -317,3 +317,11 @@ Změny proti pilotu:
 - Graf vývoje dluhu: každý měsíc stejný výpočet jako v aplikaci (stav ke konci měsíce).
 - Návrh platby: sleva na 0 Kč a výdaj v budoucím měsíci se respektují; u skončeného nájmu bez dluhu nic nenavrhuje.
 - Import: shoda účtu i VS při VS sdíleném více nájemníky už není „Rozpor“.
+
+**Blok 3 – sjednocení čísel a pojmů (verze 2.9):**
+- „Zaplatilo X z Y“ na přehledu počítá stejně jako Platby → Za měsíc (jen nájemníci, kteří v měsíci mají co platit).
+- „% vybráno“ na přehledu = „Vybráno“ ve Statistikách (zaplaceno za měsíc / předpis měsíce).
+- Výsledek po vložení platby: „Dluh po splatnosti X“ (červeně) zvlášť od „tento měsíc chybí Y“ (oranžově).
+- Upomínka z karet Dlužníci → Za měsíc / V měsíci vloží do {dluh} částku z karty a do {mesic} vybraný měsíc.
+- Podtitul Dlužníků podle záložky.
+- Slovník: **Přišlo** = podle data přijetí (Platby „Přišlo v měsíci“, „Co přišlo“, Statistiky „Přišlo za období“); **Zaplaceno za …** = podle měsíce; **Dluh / Po splatnosti** = jen ukončené měsíce; **Chybí tento měsíc** = běžný měsíc; „Dluh kum.“ → „Dluh celkem“; „Úspěšnost“ → „Vybráno“.

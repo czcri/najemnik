@@ -178,7 +178,7 @@ try {
   await snimek('detail');
   await klik('Měsíce');
   t = await text();
-  over(t.includes('Dluh kum.') && t.includes('výdaj ' + kc(2500)), 'záložka Měsíce s kumulativním dluhem a výdajem');
+  over(t.includes('Dluh celkem') && t.includes('výdaj ' + kc(2500)), 'záložka Měsíce s kumulativním dluhem a výdajem');
   await snimek('detail-mesice');
   // Úprava „měl zaplatit“ pro měsíc (sleva) klepnutím na měsíc v tabulce
   over((await text()).includes('budoucí'), 'tabulka Měsíce: příští měsíc jako budoucí');
@@ -210,7 +210,7 @@ try {
   over(await pocetVDb('platby') === predDvojklikem + 1, 'dvojí odeslání zapíše jen jednu platbu');
   await pockej(500);
   t = await text();
-  over(t.includes('Zbývá dluh'), 'vložit platbu: výsledek „Zbývá dluh…“', t.slice(0, 300));
+  over(t.includes('Dluh po splatnosti') && t.includes('tento měsíc chybí'), 'vložit platbu: výsledek „Dluh po splatnosti“ + běžný měsíc zvlášť', t.slice(0, 300));
   await snimek('vlozit-vysledek');
 
   // 6) Přehled, dlužníci, platby, statistiky, nastavení
@@ -221,7 +221,7 @@ try {
   await snimek('prehled');
   await klik('O aplikaci');
   t = await text();
-  over(t.includes('verze 2.8') && t.toLowerCase().includes('vytvořilo'), 'panel O aplikaci z loga v záhlaví');
+  over(t.includes('verze 2.9') && t.toLowerCase().includes('vytvořilo'), 'panel O aplikaci z loga v záhlaví');
   await snimek('o-aplikaci', false);
   await klik('Zavřít');
   await jdi('#/dluznici');
@@ -234,6 +234,11 @@ try {
   t = await text();
   over(t.includes('V měsíci září 2026') && t.includes('Jan Testovací'), 'dlužníci: záložka V měsíci (září)', t.slice(0, 500));
   await snimek('dluznici-v-mesici', false);
+  const castkaKarty = await js(`document.querySelector('.card-soft-2 .text-lg')?.innerText ?? ''`);
+  await klik('Upomínka');
+  const textKarty = await js('document.querySelector("textarea")?.value ?? ""');
+  over(castkaKarty && textKarty.includes(castkaKarty.replace(/\u00a0/g, ' ')), 'upomínka z karty měsíce: částka z karty', `${castkaKarty} | ${textKarty}`);
+  await klik('Zavřít');
   await klik('Celkem');
   await klik('Upomínka');
   t = await text();
@@ -245,7 +250,7 @@ try {
   await klik('Zavřít');
   await jdi('#/platby');
   t = await text();
-  over(t.includes('Přijato v měsíci') && t.includes('Přijaté platby') && t.includes('Přišlo tento měsíc'), 'platby: výchozí záložka Přijato v měsíci');
+  over(t.includes('Přišlo v měsíci') && t.includes('Co přišlo') && t.includes('Přišlo tento měsíc'), 'platby: výchozí záložka Přišlo v měsíci');
   await snimek('platby');
   await klik('Za měsíc');
   await klik('Předchozí měsíc');

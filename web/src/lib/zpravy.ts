@@ -14,13 +14,13 @@ export const proSms = (t: string) => bezPevnychMezer(t)
 
 export const ZNACKY = ['osloveni', 'jmeno', 'dluh', 'tento_mesic', 'mesic', 'najem', 'nemovitost', 'ucet', 'vs', 'termin'] as const;
 
-export function doplnSablonu(text: string, n: Najemnik, s: { dluh: number; tentoMesic: number }, dnes: string, nastaveni: Nastaveni) {
+export function doplnSablonu(text: string, n: Najemnik, s: { dluh: number; tentoMesic: number }, dnes: string, nastaveni: Nastaveni, mesic?: string) {
   const hodnoty: Record<string, string> = {
     osloveni: n.osloveni || n.jmeno,
     jmeno: n.jmeno,
     dluh: kc(s.dluh + s.tentoMesic),
     tento_mesic: kc(s.tentoMesic),
-    mesic: nazevMesice(mesicZData(dnes)),
+    mesic: nazevMesice(mesic ?? mesicZData(dnes)),
     najem: kc(najemVMesici(n, mesicZData(dnes))),
     nemovitost: n.oznaceni,
     ucet: n.ucetProPlatby || nastaveni.ucty[0]?.ucet || '—',

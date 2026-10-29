@@ -15,9 +15,9 @@ type Zalozka = 'celkem' | 'za' | 'v';
 // V měsíci (nájem měsíce vs. co v něm přišlo, s přebytkem z dřívějška) – spec. kap. 19.
 export default function Dluznici() {
   const { data, dnes, prehled, souhrn } = useData();
-  const [zpravaId, setZpravaId] = usePamet<string | null>('dluznici:zprava', null);
-  const zprava = data.najemnici.find(n => n.id === zpravaId) ?? null;
-  const setZprava = (n: Najemnik | null) => setZpravaId(n?.id ?? null);
+  const [zpravaPro, setZpravaPro] = usePamet<{ id: string; castka?: number; mesic?: string } | null>('dluznici:zprava', null);
+  const zprava = data.najemnici.find(n => n.id === zpravaPro?.id) ?? null;
+  const setZprava = (n: Najemnik | null, castka?: number, mesicKarty?: string) => setZpravaPro(n ? { id: n.id, castka, mesic: mesicKarty } : null);
   const [zalozka, setZalozka] = useState<Zalozka>('celkem');
   const aktualni = mesicZData(dnes);
   const nejstarsi = data.najemnici.map(n => n.zacatek).sort()[0] ?? aktualni;
@@ -29,7 +29,8 @@ export default function Dluznici() {
   const bezi = mesic === aktualni;
 
   return (
-    <AppShell title="Dlužníci" subtitle={seznam.length ? pocet(seznam.length, 'dlužník', 'dlužníci', 'dlužníků') : 'Nikdo nedluží'}>
+    <AppShell title="Dlužníci" subtitle={zalozka === 'celkem' ? (seznam.length ? pocet(seznam.length, 'dlužník', 'dlužníci', 'dlužníků') : 'Nikdo nedluží')
+      : `${zalozka === 'za' ? 'Za' : 'V měsíci'} ${nazevMesice(mesic)} · ${pocet((zalozka === 'za' ? za : v).length, 'nájemník', 'nájemníci', 'nájemníků')}`}>
       <Main className="space-y-4">
         <Zalozky hodnota={zalozka} onChange={setZalozka} volby={[{ k: 'celkem', l: 'Celkem' }, { k: 'za', l: 'Za měsíc' }, { k: 'v', l: 'V měsíci' }]} />
         {zalozka !== 'celkem' && <VolbaMesice hodnota={mesic} min={nejstarsi} max={aktualni} onChange={setMesic} />}
@@ -55,7 +56,7 @@ export default function Dluznici() {
             pozn={bezi ? 'Měsíc ještě běží – splatné do jeho konce.' : 'Jen kdo za tento měsíc k dnešku stále dluží (pozdě zaplacené a vyrovnané se nezobrazují).'}
             prazdne={`Za ${nazevMesice(mesic)} má každý zaplaceno.`} />
           {za.map(x => (
-            <KartaMesice key={x.najemnik.id} n={x.najemnik} castka={x.chybi} bezi={bezi} onZprava={() => setZprava(x.najemnik)}
+            <KartaMesice key={x.najemnik.id} n={x.najemnik} castka={x.chybi} bezi={bezi} onZprava={() => setZprava(x.najemnik, x.chybi, mesic)}
               popis={`měl ${kc(x.mel)} · zaplaceno ${kc(x.zaplaceno)}`} />
           ))}
         </>}
@@ -66,12 +67,12 @@ export default function Dluznici() {
             pozn={bezi ? 'Měsíc ještě běží.' : 'Nájem měsíce vs. co v tom měsíci přišlo (bez ohledu na to, za který měsíc). Platba dopředu se započítá do budoucích měsíců.'}
             prazdne="V tomto měsíci přišlo od všech dost." />
           {v.map(x => (
-            <KartaMesice key={x.najemnik.id} n={x.najemnik} castka={x.dluh} bezi={bezi} onZprava={() => setZprava(x.najemnik)}
+            <KartaMesice key={x.najemnik.id} n={x.najemnik} castka={x.dluh} bezi={bezi} onZprava={() => setZprava(x.najemnik, x.dluh, mesic)}
               popis={`měl zaplatit ${kc(x.mel)} · přišlo ${kc(x.prijato)}${x.predplaceno ? ` · z dřívějška ${kc(x.predplaceno)}` : ''}`} />
           ))}
         </>}
       </Main>
-      {zprava && <PanelUpominky najemnik={zprava} onClose={() => setZprava(null)} />}
+      {zprava && <PanelUpominky najemnik={zprava} castka={zpravaPro?.castka} mesic={zpravaPro?.mesic} onClose={() => setZprava(null)} />}
     </AppShell>
   );
 }

@@ -27,7 +27,7 @@ export default function VlozitPlatbu() {
   const [datum, setDatum] = usePamet('vlozit:datum', dnes);
   const [poznamka, setPoznamka] = usePamet('vlozit:poznamka', '');
   const [chyba, setChyba] = useState<string | null>(null);
-  const [hotovo, setHotovo] = useState<{ jmeno: string; castka: number; text: string; ok: boolean; id: string } | null>(null);
+  const [hotovo, setHotovo] = useState<{ jmeno: string; castka: number; text: string; dalsi: string; ok: boolean; dluh: boolean; id: string } | null>(null);
 
   const nabidka = useMemo(() => aktivni.filter(x => bezDiakritiky(x.najemnik.jmeno + ' ' + x.najemnik.oznaceni).includes(bezDiakritiky(hledat))), [aktivni, hledat]);
 
@@ -59,7 +59,8 @@ export default function VlozitPlatbu() {
       <AppShell title="Vložit platbu">
         <Main className="flex flex-col items-center pt-12 text-center">
           <span className={`flex size-20 items-center justify-center rounded-full ${hotovo.ok ? 'bg-status-ok-soft text-status-ok' : 'bg-status-due-soft text-status-due'}`}><CheckCircle2 className="size-10" /></span>
-          <h2 className={`mt-6 text-2xl font-extrabold ${hotovo.ok ? '' : 'text-status-debt'}`}>{hotovo.text}</h2>
+          <h2 className={`mt-6 text-2xl font-extrabold ${hotovo.ok ? '' : hotovo.dluh ? 'text-status-debt' : 'text-status-due'}`}>{hotovo.text}</h2>
+          {hotovo.dalsi && <p className="mt-1 font-semibold text-status-due">{hotovo.dalsi}</p>}
           <p className="mt-2 text-muted-foreground">{hotovo.jmeno} · {kc(hotovo.castka)} · {zpusob === 'prevod' ? 'převodem' : 'hotově'}</p>
           <Tlacitko className="mt-8" onClick={() => { setHotovo(null); setPoznamka(''); vyber(id); }}>Zapsat další platbu</Tlacitko>
           <Link to={`/najemnici/${hotovo.id}`} className="mt-3 flex h-14 w-full items-center justify-center rounded-[20px] bg-muted font-bold">Detail nájemníka</Link>

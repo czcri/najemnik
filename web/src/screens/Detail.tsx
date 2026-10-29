@@ -168,7 +168,7 @@ export default function Detail() {
           <>
             <Card className="mt-3">
               <div className="grid grid-cols-[1.3fr_1fr_1fr_1fr] gap-2 px-4 py-2 text-[11px] font-bold text-muted-foreground">
-                <span>Měsíc</span><span className="text-right">Měl</span><span className="text-right">Zaplatil</span><span className="text-right">Dluh kum.</span>
+                <span>Měsíc</span><span className="text-right">Měl</span><span className="text-right">Zaplatil</span><span className="text-right">Dluh celkem</span>
               </div>
               {pristi && (
                 <button onClick={() => setOkno({ typ: 'mesic', mesic: pristi.mesic })}
@@ -195,7 +195,7 @@ export default function Detail() {
               ))}
               {s.radky.length === 0 && <p className="p-6 text-center text-sm text-muted-foreground">Nájem začne od {odMesice(n.zacatek)}.</p>}
             </Card>
-            <p className="mt-2 px-2 text-xs text-muted-foreground">Klepnutím na měsíc upravíte, kolik měl zaplatit (např. dohodnutá sleva). Zaplatil = platby za daný měsíc. Co v měsíci přebývá, doplní nejstarší nezaplacené měsíce. Dluh kum. = kolik k tomu měsíci celkem chybělo (záporný = přeplatek).</p>
+            <p className="mt-2 px-2 text-xs text-muted-foreground">Klepnutím na měsíc upravíte, kolik měl zaplatit (např. dohodnutá sleva). Zaplatil = platby za daný měsíc. Co v měsíci přebývá, doplní nejstarší nezaplacené měsíce. Dluh celkem = kolik k tomu měsíci celkem chybělo (záporný = přeplatek).</p>
           </>
         )}
 

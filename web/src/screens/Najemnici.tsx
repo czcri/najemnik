@@ -25,7 +25,7 @@ export function RadekNajemnika({ r, vpravo }: { r: Prehled; vpravo?: ReactNode }
 }
 
 const FILTRY: { k: Stav | 'vse' | 'ucet' | 'hotove'; l: string }[] = [
-  { k: 'vse', l: 'Všichni' }, { k: 'dluh', l: 'Dluží' }, { k: 'bezi', l: 'Chybí' }, { k: 'ok', l: 'Zaplaceno' },
+  { k: 'vse', l: 'Všichni' }, { k: 'dluh', l: 'Dluží' }, { k: 'bezi', l: 'Chybí tento měsíc' }, { k: 'ok', l: 'Zaplaceno' },
   { k: 'preplatek', l: 'Přeplatek' }, { k: 'ucet', l: 'Na účet' }, { k: 'hotove', l: 'Hotově' },
 ];
 const bezDiakritiky = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();

@@ -8,15 +8,17 @@ import { Panel } from './ui';
 import type { Kanal, Najemnik } from '../types';
 import { usePamet } from '../lib/pamet';
 
-export function PanelUpominky({ najemnik, onClose }: { najemnik: Najemnik; onClose: () => void }) {
+// castka / mesic: upomínka z karty konkrétního měsíce – do {dluh} a {mesic} jde částka z karty.
+export function PanelUpominky({ najemnik, onClose, castka, mesic }: { najemnik: Najemnik; onClose: () => void; castka?: number; mesic?: string }) {
   const { data, dnes, stav, akce } = useData();
-  const s = stav(najemnik.id);
+  const celkovy = stav(najemnik.id);
+  const s = castka !== undefined ? { ...celkovy, dluh: castka, tentoMesic: 0 } : celkovy;
   const sablony = data.nastaveni.sablony;
   // Výchozí šablona podle situace: dluh → upomínka, jinak připomínka / potvrzení.
   const vychozi = Math.max(0, sablony.findIndex(x => x.id === (s.dluh > 0 ? 'po-splatnosti' : s.tentoMesic > 0 ? 'pripominka' : 'potvrzeni')));
   const [i, setI] = usePamet(`zprava:${najemnik.id}:sablona`, vychozi);
-  const [text, setText] = usePamet(`zprava:${najemnik.id}:text`, sablony[i] ? doplnSablonu(sablony[i].text, najemnik, s, dnes, data.nastaveni) : '');
-  const vyber = (n: number) => { setI(n); setText(doplnSablonu(sablony[n].text, najemnik, s, dnes, data.nastaveni)); };
+  const [text, setText] = usePamet(`zprava:${najemnik.id}:text`, sablony[i] ? doplnSablonu(sablony[i].text, najemnik, s, dnes, data.nastaveni, mesic) : '', `${castka}:${mesic}`);
+  const vyber = (n: number) => { setI(n); setText(doplnSablonu(sablony[n].text, najemnik, s, dnes, data.nastaveni, mesic)); };
 
   const kanaly: { k: Kanal; l: string; ok: boolean }[] = [
     { k: 'sms', l: 'SMS', ok: !!najemnik.telefon },

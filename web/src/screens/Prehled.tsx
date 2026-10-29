@@ -38,9 +38,12 @@ export default function Prehled() {
   const mesic = mesicZData(dnes);
   const aktivni = prehled.filter(r => !r.ukonceny);
   const st = statistiky(data, posunMesic(mesic, -5), mesic, dnes);
-  const tento = st.mesice.at(-1) ?? { prijato: 0, ocekavano: 0 };
-  const procento = tento.ocekavano ? Math.min(100, (tento.prijato / tento.ocekavano) * 100) : 0;
-  const zaplatilo = aktivni.filter(r => r.tentoMesic === 0 && r.mel > 0).length;
+  const tento = st.mesice.at(-1) ?? { prijato: 0, ocekavano: 0, pokryto: 0 };
+  // „% vybráno“ = kolik z předpisu měsíce je zaplaceno (stejně jako „Vybráno“ ve Statistikách).
+  const procento = tento.ocekavano ? Math.min(100, (('pokryto' in tento ? tento.pokryto : 0) / tento.ocekavano) * 100) : 0;
+  // „Zaplatilo X z Y“ stejně jako Platby → Za měsíc: jen nájemníci, kteří tento měsíc mají co platit.
+  const mesicni = prehled.map(r => r.radky.find(x => x.mesic === mesic)).filter(r => r && r.mel > 0);
+  const zaplatilo = mesicni.filter(r => r!.chybi === 0).length;
   const zaloha = zalohaStara(data.nastaveni.posledniZaloha, dnes, data.najemnici.length > 0);
   const karta = useRef<HlavniKartaRef>(null);
   const [oAplikaci, setOAplikaci] = useState(false);
@@ -50,7 +53,7 @@ export default function Prehled() {
 
   const dlazdice: Dlazdice[] = [
     { to: '/najemnici', label: 'Nájemníci', sub: pocet(aktivni.length, 'nájemník', 'nájemníci', 'nájemníků'), icon: Users, tone: 'bg-status-over-soft text-status-over' },
-    { to: '/platby', label: 'Platby', sub: <>{NazevMesice(mesic).split(' ')[0]}: zaplatilo <b className="text-foreground">{zaplatilo} z {aktivni.length}</b></>, icon: Wallet, tone: 'bg-status-due-soft text-status-due' },
+    { to: '/platby', label: 'Platby', sub: <>{NazevMesice(mesic).split(' ')[0]}: zaplatilo <b className="text-foreground">{zaplatilo} z {mesicni.length}</b></>, icon: Wallet, tone: 'bg-status-due-soft text-status-due' },
     {
       to: '/dluznici', label: 'Dlužníci', icon: AlertTriangle, tone: 'bg-status-debt-soft text-status-debt',
       sub: souhrn.dluzniku
