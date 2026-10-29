@@ -1,22 +1,16 @@
 import { useRef, useState } from 'react';
 import { SymbolSS } from '../components/logo';
 import { PanelOAplikaci } from './Nastaveni';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { FormNajemnik } from '../components/formulare';
 import { HlavniKarta, useHotovostDnes, type HlavniKartaRef } from '../components/HlavniKarta';
-import { AlertTriangle, BarChart3, Banknote, Building2, ChevronRight, FileUp, Plus, Users, Wallet, type LucideIcon } from 'lucide-react';
+import { AlertTriangle, BarChart3, Banknote, Building2, ChevronRight, Download, FileUp, Plus, Settings, Users, Wallet, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { AppShell, Main } from '../components/ui';
 import { useData } from '../data/store';
 import { mesicZData, statistiky } from '../lib/core';
-import { NazevMesice, kc, pocet, posunMesic } from '../lib/format';
-
-export const ZALOHA_PO_DNECH = 60;
-
-export function zalohaStara(posledni: string | null, dnes: string, maData: boolean) {
-  if (!maData) return false;
-  if (!posledni) return true;
-  return (Date.parse(dnes) - Date.parse(posledni)) / 86400000 > ZALOHA_PO_DNECH;
-}
+import { zalohaStara } from '../lib/zaloha';
+import { NazevMesice, datumCz, kc, nazevMesice, pocet, posunMesic } from '../lib/format';
 
 function Sparkline({ hodnoty }: { hodnoty: number[] }) {
   if (hodnoty.length < 2 || Math.max(...hodnoty) === 0) return null;
@@ -48,7 +42,11 @@ export default function Prehled() {
   const karta = useRef<HlavniKartaRef>(null);
   const [oAplikaci, setOAplikaci] = useState(false);
   const [parametry] = useSearchParams();
-  const uvodni = { hotovost: 0, mesic: 1, ucet: 2 }[parametry.get('karta') ?? ''] ?? 0;
+  // Bez nájemníků platících hotově začít stranou Měsíc (jinak by byla první strana prázdná).
+  const nikdoHotove = !data.najemnici.some(n => n.zpusobPlaceni === 'hotove');
+  const uvodni = { hotovost: 0, mesic: 1, ucet: 2 }[parametry.get('karta') ?? ''] ?? (nikdoHotove ? 1 : 0);
+  const [novy, setNovy] = useState(false);
+  const navigate = useNavigate();
   const hotovost = useHotovostDnes();
 
   const dlazdice: Dlazdice[] = [
@@ -64,9 +62,7 @@ export default function Prehled() {
     {
       to: '/statistiky', label: 'Statistiky', icon: BarChart3, tone: 'bg-status-ok-soft text-status-ok',
       sub: <>{NazevMesice(mesic).split(' ')[0]}: přišlo {kc(tento.prijato)}</>,
-      extra: zaloha
-        ? <span className="rounded-full bg-status-due-soft px-2 py-0.5 text-[10px] font-bold text-status-due">Zálohovat</span>
-        : <Sparkline hodnoty={st.mesice.map(m => m.prijato)} />,
+      extra: <Sparkline hodnoty={st.mesice.map(m => m.prijato)} />,
     },
     { to: '/import', label: 'Import z banky', sub: 'Nahrát výpisy', icon: FileUp, tone: 'bg-muted text-muted-foreground' },
   ];
@@ -79,6 +75,9 @@ export default function Prehled() {
           <h1 className="text-xl font-extrabold tracking-tight">Nájemník</h1>
           <p className="text-sm font-medium text-muted-foreground">{NazevMesice(mesic)}</p>
         </div>
+        <Link to="/nastaveni" aria-label="Nastavení" className="flex size-12 items-center justify-center rounded-full card-soft text-muted-foreground">
+          <Settings className="size-5" />
+        </Link>
         <button aria-label="O aplikaci" onClick={() => setOAplikaci(true)} className="flex size-12 items-center justify-center rounded-full card-soft text-brand">
           <SymbolSS className="size-8" />
         </button>
@@ -86,6 +85,23 @@ export default function Prehled() {
       {oAplikaci && <PanelOAplikaci onClose={() => setOAplikaci(false)} />}
 
       <Main>
+        {zaloha && (
+          <Link to="/nastaveni#zaloha" className="mb-3 flex w-full items-center gap-3 rounded-2xl bg-status-due-soft px-4 py-3 text-sm">
+            <Download className="size-5 shrink-0 text-status-due" />
+            <span className="flex-1"><b className="block">Zálohovat data</b>
+              <span className="text-xs text-muted-foreground">{data.nastaveni.posledniZaloha ? `Poslední záloha ${datumCz(data.nastaveni.posledniZaloha)}` : 'Zatím žádná záloha'} – data jsou jen v telefonu.</span></span>
+            <ChevronRight className="size-4 text-muted-foreground" />
+          </Link>
+        )}
+        {data.najemnici.length === 0 && (
+          <section className="card-soft-2 mb-4 p-6 text-center">
+            <p className="text-lg font-extrabold">Vítejte v aplikaci Nájemník</p>
+            <p className="mt-1 text-sm text-muted-foreground">Začněte prvním nájemníkem – jméno, nemovitost, od kdy a kolik platí.</p>
+            <button onClick={() => setNovy(true)} className="card-hero mt-5 h-12 w-full font-bold">+ Přidat prvního nájemníka</button>
+            <Link to="/nastaveni#zaloha" className="mt-3 block text-sm font-semibold text-primary">Mám zálohu – obnovit data</Link>
+          </section>
+        )}
+        {novy && <FormNajemnik onClose={() => setNovy(false)} onUlozeno={id => navigate(`/najemnici/${id}`)} />}
         {(hotovost.dnes.length > 0 || hotovost.poTerminu.length > 0) && (
           <button onClick={() => karta.current?.ukaz(0)} className="mb-3 flex w-full items-center gap-3 rounded-2xl bg-status-due-soft px-4 py-3 text-left text-sm">
             <Banknote className="size-5 shrink-0 text-status-due" />
@@ -96,11 +112,11 @@ export default function Prehled() {
             <ChevronRight className="size-4 text-muted-foreground" />
           </button>
         )}
-        <HlavniKarta ref={karta} uvodni={uvodni} mesic={
-        <Link to="/platby" className="card-navy block min-h-[392px] p-6">
+        {data.najemnici.length > 0 && <HlavniKarta ref={karta} uvodni={uvodni} mesic={
+        <Link to="/platby" className="card-navy block min-h-[340px] p-6">
           <div className="flex items-center justify-between">
             <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold">{NazevMesice(mesic)}</span>
-            <span className="text-xs font-semibold opacity-70 tabular">{Math.round(procento)} % vybráno</span>
+            <span className="text-xs font-semibold opacity-70 tabular">za {nazevMesice(mesic).split(' ')[0]} zaplaceno {Math.round(procento)} %</span>
           </div>
           <p className="mt-5 text-sm opacity-70">Přišlo tento měsíc</p>
           <p className="text-[40px] leading-tight font-extrabold tracking-tight tabular">{kc(tento.prijato)}</p>
@@ -117,7 +133,7 @@ export default function Prehled() {
               <p className="text-lg font-bold tabular">{kc(tento.ocekavano)}</p>
             </div>
           </div>
-        </Link>} />
+        </Link>} />}
 
         <h2 className="mt-6 mb-3 px-2 text-sm font-bold text-muted-foreground">Rychlé akce</h2>
         <div className="grid grid-cols-2 gap-3">

@@ -23,10 +23,11 @@ export function PanelUpominky({ najemnik, onClose, castka, mesic }: { najemnik: 
   const kanaly: { k: Kanal; l: string; ok: boolean }[] = [
     { k: 'sms', l: 'SMS', ok: !!najemnik.telefon },
     { k: 'whatsapp', l: 'WhatsApp', ok: !!najemnik.telefon },
-    { k: 'email', l: 'E-mail', ok: true },
+    { k: 'email', l: 'E-mail', ok: !!najemnik.email },
   ];
-  // Zapsat do historie až po klepnutí (odkaz otevře příslušnou aplikaci).
-  const zapis = (k: Kanal) => akce.pridejUpominku({ id: noveId(), najemnikId: najemnik.id, datum: dnes, kanal: k, text, sablona: sablony[i]?.nazev });
+  // Do historie až po potvrzení „Odesláno“ (odkaz jen otevře SMS / WhatsApp / e-mail; odeslání může uživatel zrušit).
+  const [ceka, setCeka] = useState<Kanal | null>(null);
+  const zapis = async (k: Kanal) => { await akce.pridejUpominku({ id: noveId(), najemnikId: najemnik.id, datum: dnes, kanal: k, text, sablona: sablony[i]?.nazev }); onClose(); };
 
   return (
     <Panel title={`Zpráva · ${najemnik.jmeno}`} onClose={onClose}>
@@ -40,13 +41,22 @@ export function PanelUpominky({ najemnik, onClose, castka, mesic }: { najemnik: 
       <div className="mt-4 grid grid-cols-3 gap-2">
         {kanaly.map(k => k.ok ? (
           <a key={k.k} href={odkaz(k.k, najemnik, text)} target={k.k === 'whatsapp' ? '_blank' : undefined} rel="noreferrer"
-            onClick={() => { zapis(k.k); setTimeout(onClose, 300); }}
+            onClick={() => setCeka(k.k)}
             className={`flex h-12 items-center justify-center rounded-2xl font-bold ${k.k === 'sms' ? 'card-hero' : 'bg-muted'}`}>{k.l}</a>
         ) : (
-          <span key={k.k} title="Chybí telefon" className="flex h-12 items-center justify-center rounded-2xl bg-muted font-bold opacity-40">{k.l}</span>
+          <span key={k.k} title={k.k === 'email' ? 'Chybí e-mail' : 'Chybí telefon'} className="flex h-12 items-center justify-center rounded-2xl bg-muted font-bold opacity-40">{k.l}</span>
         ))}
       </div>
-      {!najemnik.telefon && <p className="mt-2 px-1 text-xs text-muted-foreground">Pro SMS a WhatsApp doplňte nájemníkovi telefon.</p>}
+      {(!najemnik.telefon || !najemnik.email) && <p className="mt-2 px-1 text-xs text-muted-foreground">{!najemnik.telefon ? 'Pro SMS a WhatsApp doplňte nájemníkovi telefon. ' : ''}{!najemnik.email ? 'Pro e-mail doplňte adresu.' : ''}</p>}
+      {ceka && (
+        <div className="mt-4 rounded-2xl bg-status-ok-soft p-4">
+          <p className="text-sm font-bold">Odeslali jste zprávu{ceka === 'sms' ? ' SMS' : ceka === 'whatsapp' ? ' přes WhatsApp' : ' e-mailem'}?</p>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <button onClick={() => zapis(ceka)} className="h-11 rounded-xl bg-primary font-bold text-primary-foreground">Ano, zapsat</button>
+            <button onClick={() => setCeka(null)} className="h-11 rounded-xl bg-muted font-bold">Ne</button>
+          </div>
+        </div>
+      )}
     </Panel>
   );
 }

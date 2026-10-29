@@ -168,6 +168,12 @@ try {
   t = await text();
   over(t.includes('Dluží ' + kc(10000)) && t.includes('Hotově'), 'platba hotově: dluh 10 000, štítek Hotově');
 
+  // Systémové Zpět zavře panel a zůstane se na obrazovce
+  await klik('Platba');
+  await js('history.back()');
+  await pockej(400);
+  over(!(await text()).includes('Za měsíc') && (await js('location.hash')).startsWith('#/najemnici/'), 'tlačítko Zpět zavře panel, obrazovka zůstane');
+
   // 4) Výdaj (oprava) v září → dluh +2 500
   await klik('Výdaj / dluh');
   await vypln({ 'Popis': 'Oprava bojleru', 'Částka (Kč)': '2500', 'Datum': '2026-09-10' });
@@ -201,6 +207,10 @@ try {
   // 5) Vložit platbu – výsledek po uložení
   await jdi('#/vlozit-platbu');
   t = await text();
+  over(t.includes('Čekám platbu od') && !t.includes('Předvyplněn'), 'vložit platbu: nikdo nepředvybrán, rychlá volba „Čekám platbu od“');
+  await js(`[...document.querySelectorAll('button')].find(b => b.innerText.startsWith('Jan Testovací')).click()`);
+  await pockej(300);
+  t = await text();
   over(t.includes('Předvyplněn pravidelný měsíční nájem'), 'vložit platbu: předvyplněn pravidelný nájem (ne dluh)');
   await vypln({ 'Částka': '5000' });
   await klik('Převodem');
@@ -221,7 +231,7 @@ try {
   await snimek('prehled');
   await klik('O aplikaci');
   t = await text();
-  over(t.includes('verze 2.9') && t.toLowerCase().includes('vytvořilo'), 'panel O aplikaci z loga v záhlaví');
+  over(t.includes('verze 2.10') && t.toLowerCase().includes('vytvořilo'), 'panel O aplikaci z loga v záhlaví');
   await snimek('o-aplikaci', false);
   await klik('Zavřít');
   await jdi('#/dluznici');
@@ -265,7 +275,7 @@ try {
   await jdi('#/statistiky');
   await pockej(800);
   t = await text();
-  over(t.includes('Příjmy po měsících') && t.includes('Hotově vs. na účet') && t.includes('Data a záloha'), 'statistiky s grafy a zálohou');
+  over(t.includes('Příjmy po měsících') && t.includes('Hotově vs. na účet'), 'statistiky s grafy');
   await klik('Měsíc');
   t = await text();
   over(t.includes('Říjen 2026') && !t.includes('Srpen 2026 –'), 'statistiky: volba Měsíc');
@@ -274,7 +284,7 @@ try {
   await snimek('statistiky');
   await jdi('#/nastaveni');
   t = await text();
-  over(t.includes('Šablony zpráv') && t.includes('Moje účty'), 'nastavení');
+  over(t.includes('Šablony zpráv') && t.includes('Moje účty') && t.includes('Data a záloha'), 'nastavení se zálohou');
   await snimek('nastaveni');
 
   // 6b) Hotovost: nájemník platící hotově, čekám k 15. (= dnes)

@@ -98,3 +98,7 @@ Odloženo: widget na plochu + skutečné notifikace (nativní obal Capacitor/APK
 ## 2026-10-29 – verze 2.9 (revize, blok 3 – sjednocení čísel a pojmů)
 
 - Viz spec. kap. 20, blok 3.
+
+## 2026-10-29 – verze 2.10 (revize, blok 4 – ovládání)
+
+- Viz spec. kap. 20, blok 4.

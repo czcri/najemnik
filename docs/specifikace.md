@@ -325,3 +325,13 @@ Změny proti pilotu:
 - Upomínka z karet Dlužníci → Za měsíc / V měsíci vloží do {dluh} částku z karty a do {mesic} vybraný měsíc.
 - Podtitul Dlužníků podle záložky.
 - Slovník: **Přišlo** = podle data přijetí (Platby „Přišlo v měsíci“, „Co přišlo“, Statistiky „Přišlo za období“); **Zaplaceno za …** = podle měsíce; **Dluh / Po splatnosti** = jen ukončené měsíce; **Chybí tento měsíc** = běžný měsíc; „Dluh kum.“ → „Dluh celkem“; „Úspěšnost“ → „Vybráno“.
+
+**Blok 4 – ovládání (verze 2.10):**
+- Vložit platbu: nikdo není předvybraný; nahoře rychlá volba „Čekám platbu od“ (dlužníci a kdo ještě nezaplatil tento měsíc) + hledání; „Změnit“ u vybraného; po „Zapsat další platbu“ se výběr vynuluje; datum a poznámka pod sebou, kontrola data.
+- Panely: systémové tlačítko Zpět zavře panel (obrazovka zůstane); klepnutí mimo panel ho nezavře (rozepsané údaje se neztratí).
+- Dolní lišta: Přehled · Nájemníci · + · Platby · **Dlužníci**; Nastavení přes ozubené kolečko v záhlaví přehledu. Hlavní karta nižší.
+- Karta začíná stranou Měsíc, když nikdo neplatí hotově.
+- Záloha přesunuta do Nastavení (nahoře); stará záloha = výrazný pruh „Zálohovat data“ na přehledu.
+- Upomínka se zapíše do historie až po potvrzení „Odeslali jste zprávu? Ano“; E-mail jen když má nájemník adresu.
+- První spuštění: uvítací karta „Přidat prvního nájemníka“ / „Mám zálohu – obnovit data“.
+- Popisek karty: „za říjen zaplaceno X %“.

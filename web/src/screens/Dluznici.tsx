@@ -29,7 +29,7 @@ export default function Dluznici() {
   const bezi = mesic === aktualni;
 
   return (
-    <AppShell title="Dlužníci" subtitle={zalozka === 'celkem' ? (seznam.length ? pocet(seznam.length, 'dlužník', 'dlužníci', 'dlužníků') : 'Nikdo nedluží')
+    <AppShell title="Dlužníci" active="Dlužníci" subtitle={zalozka === 'celkem' ? (seznam.length ? pocet(seznam.length, 'dlužník', 'dlužníci', 'dlužníků') : 'Nikdo nedluží')
       : `${zalozka === 'za' ? 'Za' : 'V měsíci'} ${nazevMesice(mesic)} · ${pocet((zalozka === 'za' ? za : v).length, 'nájemník', 'nájemníci', 'nájemníků')}`}>
       <Main className="space-y-4">
         <Zalozky hodnota={zalozka} onChange={setZalozka} volby={[{ k: 'celkem', l: 'Celkem' }, { k: 'za', l: 'Za měsíc' }, { k: 'v', l: 'V měsíci' }]} />

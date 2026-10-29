@@ -38,3 +38,12 @@ export async function prectiZalohu(f: File): Promise<{ data: Data; varovani: str
   const vychozi = vychoziNastaveni();
   return { data: { ...z, nastaveni: { ...vychozi, ...z.nastaveni, pravidla: { ...vychozi.pravidla, ...z.nastaveni.pravidla } } }, varovani };
 }
+
+// Připomínka zálohy: po 60 dnech bez zálohy (jen když jsou nějaká data).
+export const ZALOHA_PO_DNECH = 60;
+
+export function zalohaStara(posledni: string | null, dnes: string, maData: boolean) {
+  if (!maData) return false;
+  if (!posledni) return true;
+  return (Date.parse(dnes) - Date.parse(posledni)) / 86400000 > ZALOHA_PO_DNECH;
+}

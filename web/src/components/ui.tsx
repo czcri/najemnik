@@ -1,7 +1,7 @@
 // Společné prvky vzhledu (podle návrhu z Lovable).
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Banknote, CalendarDays, ChevronLeft, ChevronRight, Home, Landmark, ListChecks, Plus, Settings, Users, X, type LucideIcon } from 'lucide-react';
-import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from 'react';
+import { AlertTriangle, ArrowLeft, Banknote, CalendarDays, ChevronLeft, ChevronRight, Home, Landmark, ListChecks, Plus, Users, X, type LucideIcon } from 'lucide-react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { NazevMesice, kc, posunMesic } from '../lib/format';
 import type { Stav, Zpusob } from '../types';
@@ -35,7 +35,7 @@ export function AppShell({ children, title, subtitle, active, right }: {
 
 function BottomNav({ active }: { active?: string }) {
   const left = [{ l: 'Přehled', i: Home, to: '/' }, { l: 'Nájemníci', i: Users, to: '/najemnici' }];
-  const right = [{ l: 'Platby', i: ListChecks, to: '/platby' }, { l: 'Nastavení', i: Settings, to: '/nastaveni' }];
+  const right = [{ l: 'Platby', i: ListChecks, to: '/platby' }, { l: 'Dlužníci', i: AlertTriangle, to: '/dluznici' }];
   return (
     <nav className="fixed inset-x-0 bottom-0 z-10">
       <div className="mx-auto max-w-[430px] px-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
@@ -115,10 +115,36 @@ export function useChrana() {
 }
 
 // Spodní panel (formuláře, upomínka).
+// Systémové tlačítko Zpět (Android) zavře nejvrchnější otevřený panel místo opuštění obrazovky.
+// Do historie se přidá jeden záznam, dokud je otevřený aspoň jeden panel.
+const otevrenePanely: (() => void)[] = [];
+function zpetZavrePanel() {
+  if (history.state?.panel) return;
+  history.pushState({ ...history.state, panel: true }, '');
+}
+if (typeof window !== 'undefined') {
+  window.addEventListener('popstate', () => {
+    if (!history.state?.panel && otevrenePanely.length) otevrenePanely[otevrenePanely.length - 1]();
+  });
+}
+
 export function Panel({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+  const zavrit = useRef(onClose);
+  zavrit.current = onClose;
+  useEffect(() => {
+    const f = () => zavrit.current();
+    otevrenePanely.push(f);
+    zpetZavrePanel();
+    return () => {
+      otevrenePanely.splice(otevrenePanely.indexOf(f), 1);
+      // Zavřeno jinak než Zpět (křížek, uložení): záznam z historie odebrat, pokud už žádný panel není otevřený
+      // (s odkladem – při přepnutí panelu na jiný se hned otevře další).
+      setTimeout(() => { if (!otevrenePanely.length && history.state?.panel) history.back(); }, 0);
+    };
+  }, []);
   return createPortal(
-    <div className="fixed inset-0 z-30 flex items-end bg-black/40 text-foreground" onClick={onClose}>
-      <div onClick={e => e.stopPropagation()}
+    <div className="fixed inset-0 z-30 flex items-end bg-black/40 text-foreground">
+      <div
         className="animace-panel mx-auto max-h-[92vh] w-full max-w-[430px] overflow-y-auto rounded-t-[28px] bg-background p-5 pb-[max(2rem,env(safe-area-inset-bottom))]">
         <div className="mb-4 flex items-center justify-between gap-3">
           <h2 className="text-lg font-extrabold">{title}</h2>

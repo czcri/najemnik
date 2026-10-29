@@ -15,7 +15,10 @@ export default function VlozitPlatbu() {
   const toast = useToast();
   const [busy, chran] = useChrana();
   const aktivni = prehled.filter(r => !r.ukonceny);
-  const [id, setId] = usePamet('vlozit:id', aktivni.find(r => r.dluh + r.tentoMesic > 0)?.najemnik.id ?? aktivni[0]?.najemnik.id ?? '');
+  // Nikoho nepředvybírat – aby se platba omylem nezapsala jinému nájemníkovi.
+  const [id, setId] = usePamet('vlozit:id', '');
+  // Rychlá volba: kdo ještě nezaplatil tento měsíc nebo dluží (dlužníci první).
+  const cekam = aktivni.filter(x => x.dluh + x.tentoMesic > 0).sort((a, b) => b.dluh - a.dluh || a.najemnik.jmeno.localeCompare(b.najemnik.jmeno, 'cs'));
   const [hledat, setHledat] = useState('');
   const r = prehled.find(x => x.najemnik.id === id);
   // Za nejstarší nezaplacený / běžný (u „dopředu“ příští) měsíc; pravidelný nájem, nebo doplatek.
@@ -46,6 +49,7 @@ export default function VlozitPlatbu() {
     if (!r) return setChyba('Vyberte nájemníka.');
     const c = parseCastka(castka);
     if (!c) return setChyba('Částka musí být kladné celé číslo v korunách.');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(datum)) return setChyba('Vyplňte datum.');
     const platba = { id: noveId(), najemnikId: r.najemnik.id, datum, castka: c, zaMesic, poznamka: poznamka.trim(), zdroj: { typ: zpusob } as const };
     await akce.ulozPlatbu(platba);
     // Výsledek spočítat hned z nových dat (stav v kontextu se obnoví až po překreslení).
@@ -62,7 +66,7 @@ export default function VlozitPlatbu() {
           <h2 className={`mt-6 text-2xl font-extrabold ${hotovo.ok ? '' : hotovo.dluh ? 'text-status-debt' : 'text-status-due'}`}>{hotovo.text}</h2>
           {hotovo.dalsi && <p className="mt-1 font-semibold text-status-due">{hotovo.dalsi}</p>}
           <p className="mt-2 text-muted-foreground">{hotovo.jmeno} · {kc(hotovo.castka)} · {zpusob === 'prevod' ? 'převodem' : 'hotově'}</p>
-          <Tlacitko className="mt-8" onClick={() => { setHotovo(null); setPoznamka(''); vyber(id); }}>Zapsat další platbu</Tlacitko>
+          <Tlacitko className="mt-8" onClick={() => { setHotovo(null); setPoznamka(''); setId(''); setDatum(dnes); }}>Zapsat další platbu</Tlacitko>
           <Link to={`/najemnici/${hotovo.id}`} className="mt-3 flex h-14 w-full items-center justify-center rounded-[20px] bg-muted font-bold">Detail nájemníka</Link>
         </Main>
       </AppShell>
@@ -79,6 +83,21 @@ export default function VlozitPlatbu() {
         <form onSubmit={chran(uloz)} className="space-y-5">
           <div>
             <p className="mb-2 px-2 text-sm font-bold text-muted-foreground">Nájemník</p>
+            {!r && !hledat && cekam.length > 0 && (
+              <div className="mb-2">
+                <p className="mb-2 px-2 text-xs font-semibold text-muted-foreground">Čekám platbu od</p>
+                <div className="flex flex-wrap gap-2">
+                  {cekam.map(x => (
+                    <button type="button" key={x.najemnik.id} onClick={() => vyber(x.najemnik.id)}
+                      className="card-soft-2 flex min-h-12 items-center gap-2 rounded-2xl px-3 py-2 text-left active:bg-muted">
+                      <ZpusobIkona m={x.najemnik.zpusobPlaceni ?? 'ucet'} size="sm" />
+                      <span><b className="block text-sm leading-tight">{x.najemnik.jmeno}</b>
+                        <span className={`text-[11px] font-semibold ${x.dluh ? 'text-status-debt' : 'text-status-due'}`}>{x.dluh ? `dluh ${kc(x.dluh)}` : `chybí ${kc(x.tentoMesic)}`}</span></span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             {r && !hledat && (
               <div className="card-soft-2 flex items-center gap-3 p-4">
                 <ZpusobIkona m={r.najemnik.zpusobPlaceni ?? 'ucet'} />
@@ -88,11 +107,12 @@ export default function VlozitPlatbu() {
                     {r.dluh > 0 && <span className="font-bold text-status-debt"> · dluh {kc(r.dluh)}</span>}
                     {r.tentoMesic > 0 && <span className="font-bold text-status-due"> · tento měsíc {kc(r.tentoMesic)}</span>}</p>
                 </div>
+                <button type="button" onClick={() => setId('')} className="shrink-0 rounded-xl bg-muted px-3 py-2 text-xs font-bold">Změnit</button>
               </div>
             )}
             <label className="card-soft mt-2 flex min-h-12 items-center gap-3 px-4">
               <Search className="size-5 text-muted-foreground" />
-              <input value={hledat} onChange={e => setHledat(e.target.value)} placeholder="Změnit nájemníka – hledat" className="h-12 flex-1 bg-transparent text-[15px] outline-none" />
+              <input value={hledat} onChange={e => setHledat(e.target.value)} placeholder={r ? 'Jiný nájemník – hledat' : 'Hledat nájemníka'} className="h-12 flex-1 bg-transparent text-[15px] outline-none" />
             </label>
             {hledat && (
               <div className="card-soft-2 mt-2 max-h-64 divide-y divide-border overflow-y-auto">
@@ -105,6 +125,8 @@ export default function VlozitPlatbu() {
               </div>
             )}
           </div>
+          {!r && <p className="px-2 text-sm text-muted-foreground">Vyberte nájemníka – pak se předvyplní částka a měsíc.</p>}
+          {r && <>
           <Pole label="Částka">
             <div className="card-soft flex h-20 items-center px-5">
               <input inputMode="numeric" value={castka} onChange={e => setCastka(e.target.value)} className="min-w-0 flex-1 bg-transparent text-[34px] font-extrabold tabular outline-none" />
@@ -122,10 +144,9 @@ export default function VlozitPlatbu() {
           <Pole label="Způsob platby">
             <Prepinac hodnota={zpusob} onChange={setZpusob} volby={[{ k: 'prevod', l: 'Převodem', i: Landmark }, { k: 'hotove', l: 'Hotově', i: Banknote }]} />
           </Pole>
-          <div className="grid grid-cols-2 gap-3">
-            <Pole label="Datum"><input type="date" value={datum} onChange={e => setDatum(e.target.value)} className={VSTUP} /></Pole>
-            <Pole label="Poznámka"><input value={poznamka} onChange={e => setPoznamka(e.target.value)} placeholder="nepovinné" className={VSTUP} /></Pole>
-          </div>
+          <Pole label="Datum"><input type="date" value={datum} onChange={e => setDatum(e.target.value)} className={VSTUP} /></Pole>
+          <Pole label="Poznámka"><input value={poznamka} onChange={e => setPoznamka(e.target.value)} placeholder="nepovinné" className={VSTUP} /></Pole>
+          </>}
           <Chyba text={chyba} />
           <Tlacitko type="submit" disabled={!r || busy}>Uložit platbu</Tlacitko>
         </form>

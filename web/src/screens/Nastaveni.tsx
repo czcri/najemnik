@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { CalendarPlus, ChevronRight, Database, Download, Plus, Trash2 } from 'lucide-react';
 import { AppShell, Card, Main, Nadpis, Panel, Pole, Tlacitko, VSTUP, useToast } from '../components/ui';
 import { LogoSimplySoftware } from '../components/logo';
+import { Zaloha } from '../components/Zaloha';
 import { useData } from '../data/store';
 import { VYCHOZI_SABLONY } from '../data/vychozi';
 import { aktualniNajem, icsHotovosti, mesicZData, normalizujUcet, odkazKalendare } from '../lib/core';
@@ -10,7 +11,7 @@ import { datumCz, kc, noveId, posunMesic } from '../lib/format';
 import { ZNACKY, doplnSablonu } from '../lib/zpravy';
 import type { Najemnik, Sablona } from '../types';
 
-export const VERZE_APLIKACE = '2.9';
+export const VERZE_APLIKACE = '2.10';
 
 const UKAZKA: Najemnik = {
   id: 'x', jmeno: 'Jana Nováková', osloveni: 'paní Nováková', oznaceni: 'Byt 2 – Kolín', zacatek: '2026-01', konec: null,
@@ -50,14 +51,9 @@ export default function Nastaveni() {
   }
 
   return (
-    <AppShell title="Nastavení" active="Nastavení">
+    <AppShell title="Nastavení">
       <Main>
-        <Link to="/statistiky#zaloha" className="card-soft-2 flex items-center gap-3 p-4">
-          <span className="flex size-11 items-center justify-center rounded-2xl bg-status-ok-soft text-status-ok"><Database className="size-5" /></span>
-          <span className="flex-1"><b className="block">Data a záloha</b>
-            <span className="text-xs text-muted-foreground">Poslední záloha: {n.posledniZaloha ? datumCz(n.posledniZaloha) : 'zatím žádná'}</span></span>
-          <ChevronRight className="size-4 text-muted-foreground" />
-        </Link>
+        <Zaloha />
 
         <Nadpis>Šablony zpráv</Nadpis>
         <Card>

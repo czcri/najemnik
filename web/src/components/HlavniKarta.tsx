@@ -71,7 +71,7 @@ function StranaSeznamu({ zpusob }: { zpusob: 'hotove' | 'ucet' }) {
   }
 
   return (
-    <section className="card-navy flex min-h-[392px] flex-col p-5">
+    <section className="card-navy flex min-h-[340px] flex-col p-5">
       <div className="flex items-center justify-between">
         <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold">{hotove ? 'Hotovost' : 'Na účet'} · {NazevMesice(mesic).split(' ')[0]}</span>
         <span className="text-xs font-semibold opacity-70 tabular">{s.celkem ? `zaplatilo ${s.zaplaceno} z ${s.celkem}` : ''}</span>
@@ -88,7 +88,7 @@ function StranaSeznamu({ zpusob }: { zpusob: 'hotove' | 'ucet' }) {
           <p className="mt-3 font-bold">{hotove ? 'Všechna hotovost za tento měsíc převzata' : 'Všichni na účet zaplatili'}</p>
         </div>
       ) : (
-        <ul className="bez-posuvniku mt-4 max-h-[264px] flex-1 space-y-2 overflow-y-auto">
+        <ul className="bez-posuvniku mt-4 max-h-[212px] flex-1 space-y-2 overflow-y-auto">
           {s.polozky.map(p => (
             <li key={p.najemnik.id} className="flex items-center gap-3 rounded-2xl bg-white/5 p-2.5">
               {hotove && (
