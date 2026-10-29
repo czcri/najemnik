@@ -58,7 +58,7 @@ function PrijatoVMesici({ mesic, podleId }: { mesic: string; podleId: Map<string
   return (
     <>
       <section className="card-navy mt-4 p-5">
-        <p className="text-sm opacity-70">{mesic === mesicZData(dnes) ? 'Přišlo tento měsíc' : 'Přišlo v tomto měsíci'}</p>
+        <p className="text-sm opacity-70">{mesic === mesicZData(dnes) ? 'Přišlo tento měsíc' : `Přišlo v měsíci ${nazevMesice(mesic)}`}</p>
         <p className="text-[34px] leading-tight font-extrabold tabular">{kc(ucet + hotove)}</p>
         <p className="mt-2 text-sm opacity-80 tabular">na účet {kc(ucet)} · hotově {kc(hotove)} · {pocet(platby.length, 'platba', 'platby', 'plateb')}</p>
       </section>

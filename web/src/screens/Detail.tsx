@@ -3,7 +3,7 @@ import { Navigate, useParams } from 'react-router-dom';
 import { Bar, ComposedChart, ReferenceArea, ResponsiveContainer, Scatter, Tooltip, XAxis } from 'recharts';
 import { Mail, MessageSquare, Pencil, Phone, Plus, Receipt, RefreshCw } from 'lucide-react';
 import { AppShell, Card, Main, STAV_TEXT, ZpusobIkona } from '../components/ui';
-import { FormNajem, FormNajemnik, FormPlatba, FormVydaj, PanelMesice } from '../components/formulare';
+import { FormNajem, FormNajemnik, FormPlatba, FormVydaj, PanelMesice, PanelUkonceni } from '../components/formulare';
 import { PanelUpominky } from '../components/upominka';
 import { useData } from '../data/store';
 import { aktualniNajem, dalsiMesic, mesicZData, najemVMesici, obdobiPlatby, upravaVMesici, zpusobPlatby } from '../lib/core';
@@ -12,9 +12,10 @@ import type { Najemnik, Platba } from '../types';
 import { usePamet } from '../lib/pamet';
 
 // V konceptu (usePamet) jen id záznamu – ne kopie, aby se po smazání / změně nevrátila stará data.
-type Okno = { typ: 'platba'; id?: string } | { typ: 'vydaj'; id?: string; datum?: string } | { typ: 'mesic'; mesic: string } | { typ: 'najem' } | { typ: 'upravit' } | { typ: 'zprava' } | null;
+type Okno = { typ: 'platba'; id?: string } | { typ: 'vydaj'; id?: string; datum?: string } | { typ: 'mesic'; mesic: string } | { typ: 'najem' } | { typ: 'upravit' } | { typ: 'zprava' } | { typ: 'ukoncit' } | null;
 
 const BANKY: Record<string, string> = { fio: 'Fio', cs: 'ČS', kb: 'KB' };
+const KANAL: Record<string, string> = { sms: 'SMS', whatsapp: 'WhatsApp', email: 'e-mail' };
 export function ZdrojStitek({ p }: { p: Platba }) {
   const z = p.zdroj;
   const [text, styl] = z?.typ === 'vypis' ? [`Výpis · ${BANKY[z.banka] ?? z.banka}`, 'bg-status-over-soft text-status-over']
@@ -89,7 +90,7 @@ export default function Detail() {
     : null;
   const upravovanaPlatba = okno?.typ === 'platba' && okno.id ? data.platby.find(p => p.id === okno.id) : undefined;
   const upravovanyVydaj = okno?.typ === 'vydaj' && okno.id ? data.vydaje.find(v => v.id === okno.id) : undefined;
-  const posledniUpominka = data.upominky.filter(u => u.najemnikId === n.id).sort((a, b) => b.datum.localeCompare(a.datum))[0];
+  const zpravy = data.upominky.filter(u => u.najemnikId === n.id).sort((a, b) => b.datum.localeCompare(a.datum));
 
   const [hlavni, barva] = s.stav === 'dluh' ? [`Dluží ${kc(s.dluh)}`, STAV_TEXT.dluh]
     : s.stav === 'preplatek' ? [`Přeplatek ${kc(s.preplatek)}`, 'text-[oklch(0.8_0.1_250)]']
@@ -136,12 +137,25 @@ export default function Detail() {
             {n.email && <a href={`mailto:${n.email}`} className="card-soft-2 flex h-12 min-w-0 items-center justify-center gap-2 px-2 text-sm font-bold text-primary"><Mail className="size-4 shrink-0" /><span className="truncate">{n.email}</span></a>}
           </div>
         )}
-        {(n.poznamkaDluh?.text || posledniUpominka) && (
-          <p className="mt-3 px-2 text-xs text-muted-foreground">
-            {n.poznamkaDluh?.text && <>📝 {n.poznamkaDluh.text} <span className="opacity-70">({datumCz(n.poznamkaDluh.datum)})</span><br /></>}
-            {posledniUpominka && <>Poslední zpráva: {datumCz(posledniUpominka.datum)} ({posledniUpominka.kanal === 'sms' ? 'SMS' : posledniUpominka.kanal === 'whatsapp' ? 'WhatsApp' : 'e-mail'})</>}
-          </p>
+        {n.poznamkaDluh?.text && (
+          <p className="mt-3 px-2 text-xs text-muted-foreground">📝 {n.poznamkaDluh.text} <span className="opacity-70">({datumCz(n.poznamkaDluh.datum)})</span></p>
         )}
+        {zpravy.length > 0 && (
+          <details className="mt-3 px-2">
+            <summary className="text-xs font-semibold text-muted-foreground">Odeslané zprávy ({zpravy.length}) · poslední {datumCz(zpravy[0].datum)} ({KANAL[zpravy[0].kanal]})</summary>
+            <div className="mt-2 space-y-2">
+              {zpravy.map(u => (
+                <div key={u.id} className="rounded-2xl bg-muted p-3 text-xs">
+                  <p className="font-bold">{datumCz(u.datum)} · {KANAL[u.kanal]}{u.sablona ? ` · ${u.sablona}` : ''}</p>
+                  <p className="mt-1 text-muted-foreground">{u.text}</p>
+                </div>
+              ))}
+            </div>
+          </details>
+        )}
+        <button onClick={() => setOkno({ typ: 'ukoncit' })} className="mt-3 w-full px-2 text-left text-xs font-semibold text-muted-foreground underline underline-offset-4">
+          {n.konec ? `Nájem ukončen k ${nazevMesice(n.konec)} – změnit` : 'Ukončit nájem…'}
+        </button>
 
         <nav className="mt-6 grid grid-cols-3 gap-1 rounded-2xl bg-muted p-1 text-sm font-bold">
           {([['platby', `Platby (${platby.length})`], ['mesice', 'Měsíce'], ['vydaje', `Výdaje (${vydaje.length})`]] as const).map(([k, l]) => (
@@ -219,6 +233,7 @@ export default function Detail() {
       {okno?.typ === 'najem' && <FormNajem najemnik={n} onClose={() => setOkno(null)} />}
       {okno?.typ === 'upravit' && <FormNajemnik najemnik={n} onClose={() => setOkno(null)} />}
       {okno?.typ === 'zprava' && <PanelUpominky najemnik={n} onClose={() => setOkno(null)} />}
+      {okno?.typ === 'ukoncit' && <PanelUkonceni najemnik={n} onClose={() => setOkno(null)} />}
     </AppShell>
   );
 }

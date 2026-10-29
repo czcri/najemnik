@@ -1,7 +1,7 @@
 // Seznam hotovosti / plateb na účet za aktuální měsíc (spec. kap. 13).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { seznamMesice, odkazKalendare, icsHotovosti } from '../core/hotovost.js';
+import { seznamMesice, odkazKalendare, icsHotovosti, prvniVyskyt } from '../core/hotovost.js';
 
 const najem = (id, castka, o = {}) => ({
   id, jmeno: id, oznaceni: 'Byt', zacatek: '2026-08', konec: null,
@@ -79,4 +79,13 @@ test('revize: seznam Hotovost počítá i přebytek z dřívějška (shoda s ná
   const n = { ...najem('X', 10000), zacatek: '2026-09' };
   const s = seznamMesice([n], [{ ...platba('X', '2026-09-05', 15000), zaMesic: '2026-09' }], [], '2026-10-10', 'hotove');
   assert.equal(s.polozky[0].chybi, 5000);
+});
+
+test('kalendář: dny 29–31', () => {
+  assert.equal(prvniVyskyt(31, '2026-11-10'), '2026-11-30');
+  assert.equal(prvniVyskyt(30, '2027-02-10'), '2027-03-30', 'únor nemá 30. → březen');
+  assert.equal(prvniVyskyt(5, '2026-11-10'), '2026-12-05');
+  assert.equal(prvniVyskyt(10, '2026-11-10'), '2026-11-10');
+  assert.match(odkazKalendare({ ...N[3], denHotovosti: 31 }, 7000, '2026-11-30'), /BYMONTHDAY%3D-1/);
+  assert.match(icsHotovosti([{ najemnik: { ...N[3], denHotovosti: 31 }, castka: 7000 }], '2026-11-10', 'x'), /DTSTART;VALUE=DATE:20261130\r\nRRULE:FREQ=MONTHLY;BYMONTHDAY=-1/);
 });

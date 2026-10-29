@@ -112,6 +112,7 @@ export function FormVydaj({ najemnik, vydaj, datumVychozi, onClose }: { najemnik
   async function smaz() {
     if (!vydaj || !confirm(`Smazat „${vydaj.popis}“ (${kc(vydaj.castka)})?`)) return;
     await akce.smazVydaj(vydaj.id);
+    toast('Smazáno');
     onClose();
   }
   return (
@@ -199,7 +200,7 @@ export function FormNajemnik({ najemnik, onClose, onUlozeno }: { najemnik?: Naje
   async function uloz(e: FormEvent) {
     e.preventDefault();
     if (!f.jmeno.trim()) return setChyba('Vyplňte jméno.');
-    if (!f.oznaceni.trim()) return setChyba('Vyplňte označení nemovitosti.');
+    if (!f.oznaceni.trim()) return setChyba('Vyplňte nemovitost.');
     if (!/^\d{4}-\d{2}$/.test(f.zacatek)) return setChyba('Vyplňte, od kdy platí nájem.');
     if (f.konec && f.konec < f.zacatek) return setChyba('Konec nájmu je před jeho začátkem.');
     const den = f.denHotovosti.trim() ? Number(f.denHotovosti) : undefined;
@@ -234,7 +235,10 @@ export function FormNajemnik({ najemnik, onClose, onUlozeno }: { najemnik?: Naje
   async function smaz() {
     if (!najemnik) return;
     const n = data.platby.filter(p => p.najemnikId === najemnik.id).length;
-    if (!confirm(`Opravdu smazat nájemníka ${najemnik.jmeno}${n ? ` i s ${n} platbami` : ''}?\n\nUkončený nájem raději označte „Konec nájmu“ – historie zůstane.`)) return;
+    const v = data.vydaje.filter(x => x.najemnikId === najemnik.id).length;
+    const u = data.upominky.filter(x => x.najemnikId === najemnik.id).length;
+    const sNim = [n && `${n} plateb`, v && `${v} výdajů`, u && `${u} upomínek`].filter(Boolean).join(', ');
+    if (!confirm(`Opravdu smazat nájemníka ${najemnik.jmeno}${sNim ? ` i s ${sNim}` : ''}?\n\nUkončený nájem raději označte „Konec nájmu“ – historie zůstane.`)) return;
     await akce.smazNajemnika(najemnik.id);
     toast('Nájemník smazán');
     onClose();
@@ -244,7 +248,16 @@ export function FormNajemnik({ najemnik, onClose, onUlozeno }: { najemnik?: Naje
   return (
     <Panel title={najemnik ? 'Upravit nájemníka' : 'Nový nájemník'} onClose={onClose}>
       <form onSubmit={chran(uloz)} className="space-y-4">
-        <Pole label="Jméno"><input value={f.jmeno} onChange={zmen('jmeno')} autoFocus={!najemnik} className={VSTUP} /></Pole>
+        <Pole label="Jméno *"><input value={f.jmeno} onChange={zmen('jmeno')} autoFocus={!najemnik} className={VSTUP} /></Pole>
+        <Pole label="Nemovitost *" napoveda="Adresa nebo vlastní označení, např. „Byt 2 – Kolín“."><input value={f.oznaceni} onChange={zmen('oznaceni')} className={VSTUP} /></Pole>
+        <div className="grid grid-cols-2 gap-3">
+          <Pole label="Nájem od *"><input type="month" value={f.zacatek} onChange={zmen('zacatek')} className={VSTUP} /></Pole>
+          {najemnik
+            ? <Pole label="Konec nájmu"><input type="month" value={f.konec} onChange={zmen('konec')} className={VSTUP} /></Pole>
+            : <Pole label="Nájem vč. služeb *"><input inputMode="numeric" value={f.castka} onChange={zmen('castka')} placeholder="Kč" className={VSTUP} /></Pole>}
+        </div>
+        {najemnik && <p className="px-1 text-xs text-muted-foreground">Konec nájmu vyplňte, až nájem skončí – další měsíce se už nepředepisují. Výši nájmu měníte v detailu „Změnit nájem“.</p>}
+        <p className="px-1 pt-2 text-sm font-extrabold">Nepovinné údaje</p>
         <Pole label="Způsob placení"><Prepinac hodnota={zpusob} onChange={setZpusob}
           volby={[{ k: 'ucet', l: 'Na účet', i: Landmark }, { k: 'hotove', l: 'Hotově', i: Banknote }]} /></Pole>
         <Pole label="Obvykle platí" napoveda="Podle toho se u nové platby předvybere „Za měsíc“.">
@@ -256,14 +269,6 @@ export function FormNajemnik({ najemnik, onClose, onUlozeno }: { najemnik?: Naje
             <input inputMode="numeric" value={f.denHotovosti} onChange={zmen('denHotovosti')} placeholder="1–31" className={VSTUP} />
           </Pole>
         )}
-        <Pole label="Nemovitost" napoveda="Adresa nebo vlastní označení, např. „Byt 2 – Kolín“."><input value={f.oznaceni} onChange={zmen('oznaceni')} className={VSTUP} /></Pole>
-        <div className="grid grid-cols-2 gap-3">
-          <Pole label="Nájem od"><input type="month" value={f.zacatek} onChange={zmen('zacatek')} className={VSTUP} /></Pole>
-          {najemnik
-            ? <Pole label="Konec nájmu"><input type="month" value={f.konec} onChange={zmen('konec')} className={VSTUP} /></Pole>
-            : <Pole label="Nájem vč. služeb"><input inputMode="numeric" value={f.castka} onChange={zmen('castka')} placeholder="Kč" className={VSTUP} /></Pole>}
-        </div>
-        {najemnik && <p className="px-1 text-xs text-muted-foreground">Konec nájmu vyplňte, až nájem skončí – další měsíce se už nepředepisují. Výši nájmu měníte v detailu „Změnit nájem“.</p>}
         <Pole label="Oslovení ve zprávách" napoveda="Např. „pane Nováku“. Když chybí, použije se jméno."><input value={f.osloveni} onChange={zmen('osloveni')} className={VSTUP} /></Pole>
         <div className="grid grid-cols-2 gap-3">
           <Pole label="Telefon"><input type="tel" value={f.telefon} onChange={zmen('telefon')} className={VSTUP} /></Pole>
@@ -281,9 +286,9 @@ export function FormNajemnik({ najemnik, onClose, onUlozeno }: { najemnik?: Naje
             <div>
               <span className="mb-1.5 block px-1 text-sm font-bold text-muted-foreground">Účty, ze kterých platí</span>
               {ucty.map(u => (
-                <div key={u} className="mb-2 flex items-center gap-2 rounded-2xl bg-muted px-4 py-2.5 text-sm tabular">
+                <div key={u} className="mb-2 flex items-center gap-2 rounded-2xl bg-muted py-1 pr-1 pl-4 text-sm tabular">
                   <span className="flex-1">{u}</span>
-                  <button type="button" aria-label="Odebrat účet" onClick={() => setUcty(ucty.filter(x => x !== u))}><Trash2 className="size-4 text-muted-foreground" /></button>
+                  <button type="button" aria-label="Odebrat účet" onClick={() => setUcty(ucty.filter(x => x !== u))} className="flex size-11 shrink-0 items-center justify-center rounded-xl active:bg-muted"><Trash2 className="size-5 text-muted-foreground" /></button>
                 </div>
               ))}
               <div className="flex gap-2">
@@ -356,6 +361,31 @@ export function PanelMesice({ najemnik, mesic, onClose, onVydaj }: { najemnik: N
             <button type="button" onClick={() => onVydaj(mesic === mesicZData(dnes) ? dnes : `${mesic}-01`)} className="flex w-full items-center gap-2 px-4 py-3 text-sm font-bold text-primary"><Plus className="size-4" />Přidat výdaj / dluh</button>
           </div>
         </div>
+      </form>
+    </Panel>
+  );
+}
+
+// Ukončení nájmu: od dalšího měsíce se nic nepředepisuje; historie zůstane.
+export function PanelUkonceni({ najemnik, onClose }: { najemnik: Najemnik; onClose: () => void }) {
+  const { akce, dnes } = useData();
+  const toast = useToast();
+  const [busy, chran] = useChrana();
+  const [konec, setKonec] = useState(najemnik.konec ?? mesicZData(dnes));
+  async function uloz(e: FormEvent) {
+    e.preventDefault();
+    if (konec < najemnik.zacatek) return;
+    await akce.ulozNajemnika({ ...najemnik, konec });
+    toast('Nájem ukončen');
+    onClose();
+  }
+  return (
+    <Panel title="Ukončit nájem" onClose={onClose}>
+      <form onSubmit={chran(uloz)} className="space-y-4">
+        <p className="text-sm text-muted-foreground">{najemnik.jmeno} · {najemnik.oznaceni}. Poslední měsíc, za který se platí nájem – od dalšího měsíce se už nic nepředepisuje. Historie plateb zůstane, nájemník se přesune mezi „Ukončené nájmy“.</p>
+        <Pole label="Poslední měsíc nájmu"><input type="month" value={konec} min={najemnik.zacatek} onChange={e => setKonec(e.target.value)} className={VSTUP} /></Pole>
+        <Tlacitko type="submit" disabled={busy}>Ukončit nájem k {nazevMesice(konec)}</Tlacitko>
+        {najemnik.konec && <Tlacitko typ="vedlejsi" onClick={chran(async () => { await akce.ulozNajemnika({ ...najemnik, konec: null }); toast('Ukončení zrušeno'); onClose(); })}>Zrušit ukončení</Tlacitko>}
       </form>
     </Panel>
   );

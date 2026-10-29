@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CalendarPlus, ChevronRight, Database, Download, Plus, Trash2 } from 'lucide-react';
 import { AppShell, Card, Main, Nadpis, Panel, Pole, Tlacitko, VSTUP, useToast } from '../components/ui';
@@ -6,12 +6,12 @@ import { LogoSimplySoftware } from '../components/logo';
 import { Zaloha } from '../components/Zaloha';
 import { useData } from '../data/store';
 import { VYCHOZI_SABLONY } from '../data/vychozi';
-import { aktualniNajem, icsHotovosti, mesicZData, normalizujUcet, odkazKalendare } from '../lib/core';
+import { aktualniNajem, icsHotovosti, mesicZData, normalizujUcet, odkazKalendare, prvniVyskyt } from '../lib/core';
 import { datumCz, kc, noveId, posunMesic } from '../lib/format';
 import { ZNACKY, doplnSablonu } from '../lib/zpravy';
 import type { Najemnik, Sablona } from '../types';
 
-export const VERZE_APLIKACE = '2.10';
+export const VERZE_APLIKACE = '2.11';
 
 const UKAZKA: Najemnik = {
   id: 'x', jmeno: 'Jana Nováková', osloveni: 'paní Nováková', oznaceni: 'Byt 2 – Kolín', zacatek: '2026-01', konec: null,
@@ -98,8 +98,8 @@ export default function Nastaveni() {
                   className="w-full bg-transparent text-sm font-bold outline-none placeholder:text-foreground" />
                 <p className="text-xs text-muted-foreground tabular">{u.ucet} · {u.banka}</p>
               </div>
-              <button aria-label="Odebrat účet" onClick={() => confirm(`Odebrat účet ${u.ucet}?`) && akce.ulozNastaveni({ ...n, ucty: n.ucty.filter(x => x.ucet !== u.ucet) })}>
-                <Trash2 className="size-4 text-muted-foreground" />
+              <button aria-label="Odebrat účet" className="flex size-11 shrink-0 items-center justify-center rounded-xl active:bg-muted" onClick={() => confirm(`Odebrat účet ${u.ucet}?`) && akce.ulozNastaveni({ ...n, ucty: n.ucty.filter(x => x.ucet !== u.ucet) })}>
+                <Trash2 className="size-5 text-muted-foreground" />
               </button>
             </div>
           ))}
@@ -116,8 +116,8 @@ export default function Nastaveni() {
               {n.pravidla.nenajemUcty.map(u => (
                 <div key={u} className="flex items-center gap-3 px-4 py-3 text-sm tabular">
                   <span className="flex-1">{u}</span>
-                  <button aria-label="Zrušit pravidlo" onClick={() => akce.ulozNastaveni({ ...n, pravidla: { ...n.pravidla, nenajemUcty: n.pravidla.nenajemUcty.filter(x => x !== u) } })}>
-                    <Trash2 className="size-4 text-muted-foreground" />
+                  <button aria-label="Zrušit pravidlo" className="flex size-11 shrink-0 items-center justify-center rounded-xl active:bg-muted" onClick={() => confirm(`Platby z účtu ${u} znovu nabízet k přiřazení?`) && akce.ulozNastaveni({ ...n, pravidla: { ...n.pravidla, nenajemUcty: n.pravidla.nenajemUcty.filter(x => x !== u) } })}>
+                    <Trash2 className="size-5 text-muted-foreground" />
                   </button>
                 </div>
               ))}
@@ -125,11 +125,7 @@ export default function Nastaveni() {
           </>
         )}
 
-        <Nadpis>Zabezpečení</Nadpis>
-        <div className="card-soft-2 flex items-center justify-between p-4 opacity-60">
-          <span><b className="block text-sm">Zámek aplikace (PIN / otisk)</b><span className="text-xs text-muted-foreground">Připravujeme</span></span>
-          <span className="h-7 w-12 rounded-full bg-muted" />
-        </div>
+        <Ulozeni />
 
         <div className="mt-10 flex flex-col items-center gap-2 text-center">
           <p className="text-xs text-muted-foreground">Nájemník {VERZE_APLIKACE} · data jsou uložena jen v tomto telefonu</p>
@@ -137,7 +133,7 @@ export default function Nastaveni() {
           <LogoSimplySoftware className="block h-10" />
         </div>
         <div className="h-4" />
-        <Tlacitko typ="vedlejsi" onClick={() => location.reload()}>Načíst znovu</Tlacitko>
+        <Tlacitko typ="vedlejsi" onClick={() => location.reload()}>Načíst znovu (načte novou verzi)</Tlacitko>
       </Main>
     </AppShell>
   );
@@ -149,13 +145,10 @@ function Kalendar() {
   const hotovostni = data.najemnici
     .filter(n => n.zpusobPlaceni === 'hotove' && Number.isInteger(n.denHotovosti) && (!n.konec || n.konec >= mesicZData(dnes)))
     .sort((a, b) => a.denHotovosti! - b.denHotovosti!);
-  // První výskyt: tento měsíc, pokud den ještě nebyl, jinak příští měsíc.
-  const prvni = (den: number) => {
-    const m = +dnes.slice(8, 10) <= den ? mesicZData(dnes) : posunMesic(mesicZData(dnes), 1);
-    return `${m}-${String(Math.min(den, 28)).padStart(2, '0')}`;
-  };
+  // První výskyt: tento měsíc, pokud den ještě nebyl, jinak příští (31. = poslední den měsíce).
+  const prvni = (den: number) => prvniVyskyt(den, dnes);
   function stahniIcs() {
-    const text = icsHotovosti(hotovostni.map(n => ({ najemnik: n, castka: aktualniNajem(n, dnes) })), prvni(1),
+    const text = icsHotovosti(hotovostni.map(n => ({ najemnik: n, castka: aktualniNajem(n, dnes) })), dnes,
       new Date().toISOString().replace(/[-:]/g, '').slice(0, 15) + 'Z');
     const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(new Blob([text], { type: 'text/calendar' })), download: 'najemnik-hotovost.ics' });
     a.click();
@@ -199,5 +192,17 @@ export function PanelOAplikaci({ onClose }: { onClose: () => void }) {
         <LogoSimplySoftware varianta="pod" className="block h-20" />
       </div>
     </Panel>
+  );
+}
+
+// Stav úložiště: zda Chrome data trvale drží (nesmaže je při nedostatku místa).
+function Ulozeni() {
+  const [trvale, setTrvale] = useState<boolean | null>(null);
+  useEffect(() => { navigator.storage?.persisted?.().then(setTrvale).catch(() => setTrvale(null)); }, []);
+  if (trvale === null) return null;
+  return (
+    <p className={`mt-6 rounded-2xl p-3 text-xs ${trvale ? 'bg-status-ok-soft text-status-ok' : 'bg-status-due-soft text-status-due'}`}>
+      {trvale ? 'Úložiště v telefonu je trvalé – Chrome data sám nesmaže.' : 'Chrome zatím nepovolil trvalé úložiště (obvykle až po instalaci na plochu a delším používání). Pravidelně zálohujte.'}
+    </p>
   );
 }

@@ -49,6 +49,23 @@ export function seznamMesice(najemnici, platby, vydaje, dnes, zpusob) {
   };
 }
 
+// Den v měsíci pro kalendář: 31 = poslední den měsíce (BYMONTHDAY=-1, stejně jako aplikace čeká k poslednímu dni).
+const pravidloDne = den => (den >= 31 ? -1 : den);
+
+// První výskyt dne „čekám k“ od dneška: tento měsíc, pokud den ještě nebyl, jinak příští.
+// Dny 29–30 v kratším měsíci (únor) → další měsíc, kde existují; 31 → poslední den měsíce.
+export function prvniVyskyt(den, dnes) {
+  let mesic = mesicZData(dnes);
+  for (let i = 0; i < 3; i++) {
+    const posledni = dnuVMesici(mesic);
+    const d = den >= 31 ? posledni : den;
+    const datum = `${mesic}-${pad(d)}`;
+    if (d <= posledni && datum >= dnes) return datum;
+    mesic = dalsiMesic(mesic);
+  }
+  return `${mesic}-${pad(Math.min(den, dnuVMesici(mesic)))}`;
+}
+
 // Odkaz „přidat do Google Kalendáře“: opakovaná celodenní událost každý měsíc v daný den.
 export function odkazKalendare(najemnik, castka, odData) {
   const d = odData.replace(/-/g, '');
@@ -60,23 +77,23 @@ export function odkazKalendare(najemnik, castka, odData) {
     text: `Hotovost – ${najemnik.jmeno} (${castka} Kč)`,
     details: `Nájem ${najemnik.oznaceni}. Po převzetí odškrtnout v aplikaci Nájemník.`,
     dates: `${d}/${d2}`,
-    recur: `RRULE:FREQ=MONTHLY;BYMONTHDAY=${najemnik.denHotovosti}`,
+    recur: `RRULE:FREQ=MONTHLY;BYMONTHDAY=${pravidloDne(najemnik.denHotovosti)}`,
   });
   return `https://calendar.google.com/calendar/render?${p}`;
 }
 
 // Soubor .ics se všemi připomínkami (pro jiné kalendáře); upozornění ráno v 8:00.
-export function icsHotovosti(polozky, odData, razitko) {
+export function icsHotovosti(polozky, dnes, razitko) {
   const radky = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Najemnik//CS', 'CALSCALE:GREGORIAN'];
   for (const { najemnik, castka } of polozky) {
     if (!Number.isInteger(najemnik.denHotovosti)) continue;
-    const zacatek = `${odData.slice(0, 8)}${pad(Math.min(najemnik.denHotovosti, 28))}`.replace(/-/g, '');
+    const zacatek = prvniVyskyt(najemnik.denHotovosti, dnes).replace(/-/g, '');
     radky.push(
       'BEGIN:VEVENT',
       `UID:hotovost-${najemnik.id}@najemnik`,
       `DTSTAMP:${razitko}`,
       `DTSTART;VALUE=DATE:${zacatek}`,
-      `RRULE:FREQ=MONTHLY;BYMONTHDAY=${najemnik.denHotovosti}`,
+      `RRULE:FREQ=MONTHLY;BYMONTHDAY=${pravidloDne(najemnik.denHotovosti)}`,
       `SUMMARY:Hotovost – ${najemnik.jmeno} (${castka} Kč)`,
       `DESCRIPTION:Nájem ${najemnik.oznaceni}. Po převzetí odškrtnout v aplikaci Nájemník.`,
       'BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:Hotovost', 'TRIGGER:PT8H', 'END:VALARM',

@@ -335,3 +335,14 @@ Změny proti pilotu:
 - Upomínka se zapíše do historie až po potvrzení „Odeslali jste zprávu? Ano“; E-mail jen když má nájemník adresu.
 - První spuštění: uvítací karta „Přidat prvního nájemníka“ / „Mám zálohu – obnovit data“.
 - Popisek karty: „za říjen zaplaceno X %“.
+
+**Blok 5 – doplnění a drobnosti (verze 2.11):**
+- Strana **Na účet**: kolečko = ruční potvrzení převodu (s potvrzením), zapíše „Převod – ručně“; import ho později nabídne nahradit.
+- Detail nájemníka: **historie odeslaných zpráv** (rozbalovací seznam: datum, kanál, šablona, text) a akce **„Ukončit nájem…“** (poslední měsíc, zrušit ukončení).
+- Formulář nájemníka: povinná pole nahoře s hvězdičkou, ostatní pod „Nepovinné údaje“.
+- Potvrzení smazání nájemníka uvádí i výdaje a upomínky; smazání výdaje má potvrzující hlášku.
+- Větší ikony koše (44 px); zrušení pravidla „není nájem“ s potvrzením.
+- Nastavení: odebrán nefunkční „Zámek – připravujeme“; „Načíst znovu (načte novou verzi)“; informace o trvalém úložišti.
+- Kalendář: den 31 = poslední den měsíce, první výskyt správně i pro dny 29–31.
+- Kontrast: tmavší oranžová pro text ve světlém režimu, tmavé písmo na červeném tlačítku v tmavém režimu; skloňování v záloze; „Přišlo v měsíci září 2026“.
+- Úvodní obrazovka 3 s ponechána (výslovné přání).

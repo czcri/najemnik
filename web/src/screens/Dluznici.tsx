@@ -108,7 +108,7 @@ function KartaMesice({ n, castka, popis, bezi, onZprava }: { n: Najemnik; castka
         {n.telefon
           ? <a href={`tel:${n.telefon.replace(/\s/g, '')}`} className="flex h-11 items-center justify-center gap-2 rounded-2xl bg-primary-soft text-sm font-bold text-primary"><Phone className="size-4" />Zavolat</a>
           : <span className="flex h-11 items-center justify-center rounded-2xl bg-muted text-sm text-muted-foreground">Bez telefonu</span>}
-        <button onClick={onZprava} className="flex h-11 items-center justify-center gap-2 rounded-2xl bg-status-debt text-sm font-bold text-white"><Send className="size-4" />Upomínka</button>
+        <button onClick={onZprava} className="flex h-11 items-center justify-center gap-2 rounded-2xl bg-status-debt text-sm font-bold text-on-strong"><Send className="size-4" />Upomínka</button>
       </div>
     </div>
   );
@@ -163,7 +163,7 @@ function KartaDluznika({ r, onZprava }: { r: Prehled; onZprava: () => void }) {
           {n.telefon
             ? <a href={`tel:${n.telefon.replace(/\s/g, '')}`} className="flex h-12 items-center justify-center gap-2 rounded-2xl bg-primary-soft font-bold text-primary"><Phone className="size-4" />Zavolat</a>
             : <span className="flex h-12 items-center justify-center rounded-2xl bg-muted text-sm text-muted-foreground">Bez telefonu</span>}
-          <button onClick={onZprava} className="flex h-12 items-center justify-center gap-2 rounded-2xl bg-status-debt font-bold text-white"><Send className="size-4" />Upomínka</button>
+          <button onClick={onZprava} className="flex h-12 items-center justify-center gap-2 rounded-2xl bg-status-debt font-bold text-on-strong"><Send className="size-4" />Upomínka</button>
         </div>
       </div>
       {upominka && <p className="mt-1.5 px-3 text-[11px] text-muted-foreground">Poslední upomínka: {datumCz(upominka.datum)} ({upominka.kanal === 'sms' ? 'SMS' : upominka.kanal === 'whatsapp' ? 'WhatsApp' : 'e-mail'})</p>}

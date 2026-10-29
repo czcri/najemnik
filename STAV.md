@@ -102,3 +102,7 @@ Odloženo: widget na plochu + skutečné notifikace (nativní obal Capacitor/APK
 ## 2026-10-29 – verze 2.10 (revize, blok 4 – ovládání)
 
 - Viz spec. kap. 20, blok 4.
+
+## 2026-10-29 – verze 2.11 (revize, blok 5 – doplnění a drobnosti)
+
+- Viz spec. kap. 20, blok 5. Revize docs/revize-2026-10-29.md uzavřena. Testy: 69 core + kouřový test.

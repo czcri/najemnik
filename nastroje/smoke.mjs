@@ -134,11 +134,11 @@ try {
 
   // 1b) Rozpracovaný formulář přežije ukončení aplikace (přepnutí do kontaktů, Android aplikaci zavře)
   await klik('Nový nájemník');
-  await vypln({ 'Jméno': 'Rozpracovaný Nájemník', 'Telefon': '601 222 333' });
+  await vypln({ 'Jméno *': 'Rozpracovaný Nájemník', 'Telefon': '601 222 333' });
   await cdp('Page.reload');
   await pockej(1500);
   t = await text();
-  const obnoveno = await js(`[...document.querySelectorAll('label')].find(l => l.querySelector('span')?.innerText.trim() === 'Jméno')?.querySelector('input')?.value ?? ''`);
+  const obnoveno = await js(`[...document.querySelectorAll('label')].find(l => l.querySelector('span')?.innerText.trim() === 'Jméno *')?.querySelector('input')?.value ?? ''`);
   over(t.includes('Nový nájemník') && obnoveno === 'Rozpracovaný Nájemník', 'po restartu se rozpracovaný formulář obnoví', obnoveno);
   over(t.includes('Pokračujete v rozpracovaném zápisu') && !(await js(`!!document.querySelector('[aria-label="Úvodní obrazovka"]')`)), 'hláška o obnově, bez úvodní obrazovky');
   await klik('Zavřít');
@@ -146,12 +146,12 @@ try {
   await pockej(4000);
   over(!(await text()).includes('Nový nájemník'), 'zavřený formulář se po restartu neobnovuje');
   await klik('Nový nájemník');
-  over(await js(`[...document.querySelectorAll('label')].find(l => l.querySelector('span')?.innerText.trim() === 'Jméno')?.querySelector('input')?.value ?? 'x'`) === '', 'nový formulář je po zavření zase prázdný');
+  over(await js(`[...document.querySelectorAll('label')].find(l => l.querySelector('span')?.innerText.trim() === 'Jméno *')?.querySelector('input')?.value ?? 'x'`) === '', 'nový formulář je po zavření zase prázdný');
   await klik('Zavřít');
 
   // 2) Nový nájemník
   await klik('Nový nájemník');
-  await vypln({ 'Jméno': 'Jan Testovací', 'Nemovitost': 'Byt 1 – Kolín', 'Nájem od': '2026-08', 'Nájem vč. služeb': '10000', 'Telefon': '777 123 456', 'Variabilní symbol': '1001' });
+  await vypln({ 'Jméno *': 'Jan Testovací', 'Nemovitost *': 'Byt 1 – Kolín', 'Nájem od *': '2026-08', 'Nájem vč. služeb *': '10000', 'Telefon': '777 123 456', 'Variabilní symbol': '1001' });
   await klik('Uložit');
   await pockej(500);
   t = await text();
@@ -231,7 +231,7 @@ try {
   await snimek('prehled');
   await klik('O aplikaci');
   t = await text();
-  over(t.includes('verze 2.10') && t.toLowerCase().includes('vytvořilo'), 'panel O aplikaci z loga v záhlaví');
+  over(t.includes('verze 2.11') && t.toLowerCase().includes('vytvořilo'), 'panel O aplikaci z loga v záhlaví');
   await snimek('o-aplikaci', false);
   await klik('Zavřít');
   await jdi('#/dluznici');
@@ -285,12 +285,13 @@ try {
   await jdi('#/nastaveni');
   t = await text();
   over(t.includes('Šablony zpráv') && t.includes('Moje účty') && t.includes('Data a záloha'), 'nastavení se zálohou');
+  over(!t.includes('Zámek aplikace') && t.includes('načte novou verzi'), 'nastavení: bez nefunkčního zámku');
   await snimek('nastaveni');
 
   // 6b) Hotovost: nájemník platící hotově, čekám k 15. (= dnes)
   await jdi('#/najemnici');
   await klik('Nový nájemník');
-  await vypln({ 'Jméno': 'Hana Hotová', 'Nemovitost': 'Byt 3', 'Nájem od': '2026-10', 'Nájem vč. služeb': '9000' });
+  await vypln({ 'Jméno *': 'Hana Hotová', 'Nemovitost *': 'Byt 3', 'Nájem od *': '2026-10', 'Nájem vč. služeb *': '9000' });
   await klik('Hotově', -1); // přepínač v otevřeném panelu (za ním je stejnojmenný filtr seznamu)
   await vypln({ 'Hotovost čekám k (den v měsíci)': '15' });
   await klik('Uložit');
@@ -386,6 +387,9 @@ try {
   t = await text();
   over(t.includes('0 přiřazeno') && t.includes('Zapsat 0 plateb'), 'opakovaný import nezapíše platbu znovu', t.slice(0, 400));
 
+  // Ukončit nájem jako samostatná akce v detailu
+  await jdi(`#/najemnici/${nid}`);
+  over((await text()).includes('Ukončit nájem…'), 'detail: akce Ukončit nájem');
   // Přepnutí „platí dopředu“ nesmí změnit dluh (dosavadní platby se ukotví)
   await jdi(`#/najemnici/${nid}`);
   const stavPred = await js(`document.querySelector('.card-navy p:nth-child(2)')?.innerText ?? ''`);

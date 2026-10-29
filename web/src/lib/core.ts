@@ -66,6 +66,7 @@ export type PolozkaMesice = {
 export const seznamMesice = hotovost.seznamMesice as unknown as (n: Najemnik[], p: Platba[], v: Vydaj[], dnes: string, zpusob: Zpusob) =>
   { polozky: PolozkaMesice[]; celkem: number; zaplaceno: number; prevzato: number };
 export const odkazKalendare = hotovost.odkazKalendare as unknown as (n: Najemnik, castka: number, odData: string) => string;
+export const prvniVyskyt = hotovost.prvniVyskyt as unknown as (den: number, dnes: string) => string;
 export const icsHotovosti = hotovost.icsHotovosti as unknown as (p: { najemnik: Najemnik; castka: number }[], odData: string, razitko: string) => string;
 export const zpusobPlatby = stat.zpusobPlatby as unknown as (p: Platba, n?: Najemnik) => Zpusob;
 

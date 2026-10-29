@@ -24,6 +24,7 @@
   --color-cash: var(--cash);
   --color-bank: var(--bank);
   --color-brand: var(--brand);
+  --color-on-strong: var(--on-strong);
 }
 
 :root {
@@ -38,7 +39,7 @@
   --border: oklch(0.91 0.012 85);
   --status-debt: oklch(0.56 0.19 25);
   --status-debt-soft: oklch(0.95 0.03 25);
-  --status-due: oklch(0.66 0.16 55);
+  --status-due: oklch(0.58 0.16 50); /* tmavší kvůli čitelnosti textu na světlém pozadí */
   --status-due-soft: oklch(0.95 0.04 65);
   --status-ok: oklch(0.55 0.12 162);
   --status-ok-soft: oklch(0.94 0.04 162);
@@ -46,6 +47,7 @@
   --status-over-soft: oklch(0.94 0.03 250);
   --bank: oklch(0.55 0.15 250);
   --cash: oklch(0.6 0.12 175);
+  --on-strong: #fff; /* text na plných barevných tlačítkách */
   --brand: #117; /* Simply Software */
   --gradient-hero: linear-gradient(145deg, oklch(0.5 0.12 165), oklch(0.4 0.09 185));
   --gradient-navy: radial-gradient(120% 90% at 100% 0%, oklch(0.45 0.13 170 / 0.55), transparent 55%), linear-gradient(160deg, oklch(0.27 0.06 262), oklch(0.2 0.05 265));
@@ -77,6 +79,7 @@
     --bank: oklch(0.72 0.13 250);
     --cash: oklch(0.75 0.12 175);
     --brand: oklch(0.88 0.04 275);
+    --on-strong: oklch(0.18 0.03 25);
     --shadow-card: none;
     color-scheme: dark;
   }
