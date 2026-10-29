@@ -121,3 +121,13 @@ test('obnova: poškozená data odmítnout, osiřelé záznamy vynechat, nastaven
   assert.match(r.varovani[0], /Vynecháno 1 × platbu/);
   assert.deepEqual(r.nastaveni, { pravidla: { nenajemUcty: ['1/0800'], ignorovane: [] }, sablony: [{ id: 's', nazev: 'A', text: 'B' }] });
 });
+
+test('vývoj dluhu: platba dopředu „za prosinec“ nevytvoří skok dluhu', () => {
+  const d = { najemnici: [{ ...najem('a', 10000), zacatek: '2026-08' }], platby: [
+    { id: '1', najemnikId: 'a', datum: '2026-08-05', castka: 10000, zaMesic: '2026-08' },
+    { id: '2', najemnikId: 'a', datum: '2026-09-05', castka: 10000, zaMesic: '2026-09' },
+    { id: '3', najemnikId: 'a', datum: '2026-09-06', castka: 10000, zaMesic: '2026-12' },
+  ], vydaje: [] };
+  const s = statistiky(d, '2026-08', '2026-10', '2026-10-15');
+  assert.deepEqual(s.mesice.map(m => m.dluh), [0, 0, 0]);
+});

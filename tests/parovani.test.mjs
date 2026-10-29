@@ -157,3 +157,14 @@ test('import: měsíc ze zprávy se uloží k platbě', () => {
   assert.equal(z.platby[0].zaMesic, '2026-11');
   assert.equal('zaMesic' in z.platby[1], false);
 });
+
+test('revize: název měsíce má přednost před datem, další formáty; sdílený VS', () => {
+  assert.equal(zaMesicZeZpravy('platba 5.10.2026 za listopad', '2026-10-05'), '2026-11');
+  assert.equal(zaMesicZeZpravy('najem 2026-10', '2026-10-05'), '2026-10');
+  assert.equal(zaMesicZeZpravy('najem 11/26', '2026-10-30'), '2026-11');
+  assert.equal(zaMesicZeZpravy('platba 5.10.2026', '2026-10-05'), null);
+  const a = { ...jana, vs: '77' }, b = { ...petr, vs: '77' };
+  const v = jeden(pohyb({ protiucet: '111/0800', vs: '77' }), { najemnici: [b, a] });
+  assert.equal(v.stav, 'jiste');
+  assert.equal(v.najemnikId, 'jana');
+});

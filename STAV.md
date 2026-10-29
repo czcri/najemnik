@@ -90,3 +90,7 @@ Odloženo: widget na plochu + skutečné notifikace (nativní obal Capacitor/APK
 ## 2026-10-29 – verze 2.7 (revize, blok 1 – bezpečnost dat)
 
 - Viz spec. kap. 20, blok 1.
+
+## 2026-10-29 – verze 2.8 (revize, blok 2 – výpočty)
+
+- Viz spec. kap. 20, blok 2. Testy 68.

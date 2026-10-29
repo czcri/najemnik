@@ -220,7 +220,12 @@ export function FormNajemnik({ najemnik, onClose, onUlozeno }: { najemnik?: Naje
       denHotovosti: zpusob === 'hotove' ? den : undefined,
       platiDopredu: f.platiDopredu === 'ano',
     };
-    await akce.ulozNajemnika(novy);
+    // Změna „platí dopředu“: dosavadním platbám bez „za měsíc“ zapsat měsíc podle PŮVODNÍHO pravidla,
+    // aby se zpětně neposunuly (jinak by z řádného plátce vznikl dlužník s přeplatkem).
+    const zmenaPravidla = najemnik && !!najemnik.platiDopredu !== !!novy.platiDopredu;
+    const ukotvit = zmenaPravidla ? data.platby.filter(p => p.najemnikId === najemnik.id && !p.zaMesic).map(p => ({ ...p, zaMesic: obdobiPlatby(p, najemnik) })) : [];
+    if (ukotvit.length) await akce.davka({ uloz: { najemnici: [novy], platby: ukotvit } });
+    else await akce.ulozNajemnika(novy);
     toast('Uloženo');
     onUlozeno?.(novy.id);
     onClose();

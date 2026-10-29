@@ -24,7 +24,9 @@ export function seznamMesice(najemnici, platby, vydaje, dnes, zpusob) {
     const radek = stavNajemnika(n, vlastni, dnes, vydaje.filter(v => v.najemnikId === n.id)).radky.find(r => r.mesic === zaMesic);
     const mel = radek ? radek.mel : najemVMesici(n, zaMesic);
     if (mel <= 0) continue;
-    const zaplaceno = vlastni.filter(p => obdobiPlatby(p, n) === zaMesic).reduce((s, p) => s + p.castka, 0);
+    // Stejný výpočet jako zbytek aplikace (přebytky z jiných měsíců se započtou); budoucí měsíc = předplaceno.
+    const zaplaceno = radek ? radek.mel - radek.chybi
+      : vlastni.filter(p => obdobiPlatby(p, n) === zaMesic).reduce((s, p) => s + p.castka, 0);
     const chybi = Math.max(0, mel - zaplaceno);
     const den = Number.isInteger(n.denHotovosti) ? Math.min(Math.max(n.denHotovosti, 1), posledniDen) : null;
     const ocekavano = den ? `${mesic}-${pad(den)}` : null;

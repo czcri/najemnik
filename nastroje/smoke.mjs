@@ -221,7 +221,7 @@ try {
   await snimek('prehled');
   await klik('O aplikaci');
   t = await text();
-  over(t.includes('verze 2.7') && t.toLowerCase().includes('vytvořilo'), 'panel O aplikaci z loga v záhlaví');
+  over(t.includes('verze 2.8') && t.toLowerCase().includes('vytvořilo'), 'panel O aplikaci z loga v záhlaví');
   await snimek('o-aplikaci', false);
   await klik('Zavřít');
   await jdi('#/dluznici');
@@ -370,6 +370,16 @@ try {
   await klik('Spárovat platby');
   t = await text();
   over(t.includes('0 přiřazeno') && t.includes('Zapsat 0 plateb'), 'opakovaný import nezapíše platbu znovu', t.slice(0, 400));
+
+  // Přepnutí „platí dopředu“ nesmí změnit dluh (dosavadní platby se ukotví)
+  await jdi(`#/najemnici/${nid}`);
+  const stavPred = await js(`document.querySelector('.card-navy p:nth-child(2)')?.innerText ?? ''`);
+  await klik('Upravit');
+  await klik('Dopředu', -1);
+  await klik('Uložit');
+  await pockej(500);
+  const stavPo = await js(`document.querySelector('.card-navy p:nth-child(2)')?.innerText ?? ''`);
+  over(stavPred && stavPred === stavPo, 'přepnutí „platí dopředu“ nezmění dluh', `${stavPred} → ${stavPo}`);
 
   const vMezipameti = await js(`caches.keys().then(async k => { let n = 0; for (const c of k) n += (await (await caches.open(c)).keys()).length; return n; })`);
   over(vMezipameti > 10, 'offline: všechny soubory verze v mezipaměti', String(vMezipameti));

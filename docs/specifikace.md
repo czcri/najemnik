@@ -307,3 +307,13 @@ Změny proti pilotu:
 - Obnova: důkladná kontrola tvaru dat (poškozená záloha se odmítne), osiřelé záznamy se vynechají s upozorněním, nastavení se očistí a doplní; před obnovou se automaticky stáhne záloha současných dat; potvrzení ukazuje všechny počty.
 - Ochrana proti dvojímu klepnutí u všech ukládání (formuláře, vložit platbu, převzetí hotovosti, import).
 - Offline: service worker při instalaci stáhne všechny soubory verze (seznam `soubory.json` z buildu, číslo sestavení v `sw.js`), novou verzi převezme až kompletní; chybové stránky se neukládají. Import PDF tak funguje i offline.
+
+**Blok 2 – výpočty (verze 2.8):**
+- Přepnutí „platí dopředu“: dosavadním platbám bez „za měsíc“ se zapíše měsíc podle původního pravidla (nic se zpětně neposune). V detailu upozornění, když nájemník dluží a zároveň má předplacený budoucí měsíc.
+- Výdaj po skončení nájmu (např. škoda) se počítá do posledního měsíce nájmu.
+- Rozpoznání měsíce ze zprávy: název měsíce má přednost, celé datum „d.m.rrrr“ se nebere jako měsíc; nově „2026-10“ a „10/26“.
+- Seznam Hotovost bere „zaplaceno“ ze stejného výpočtu jako zbytek aplikace (vč. přebytků).
+- Dlužníci „V měsíci“: platba určená pro budoucí měsíc se rezervuje pro něj; volný přebytek nejdřív pokryje dřívější nedoplatky (peníze na starý dluh nejsou předplatné).
+- Graf vývoje dluhu: každý měsíc stejný výpočet jako v aplikaci (stav ke konci měsíce).
+- Návrh platby: sleva na 0 Kč a výdaj v budoucím měsíci se respektují; u skončeného nájmu bez dluhu nic nenavrhuje.
+- Import: shoda účtu i VS při VS sdíleném více nájemníky už není „Rozpor“.

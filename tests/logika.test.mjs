@@ -225,3 +225,15 @@ test('úprava nájmu pro měsíc (sleva) a návrat ke standardu', () => {
   const p = navrhPlatby({ ...novy, upravy: nastavUpravu(novy, '2026-11', null, 7000) }, [platba('p', '2026-10-03', 10000)], DNES);
   assert.deepEqual([p.zaMesic, p.castka], ['2026-11', 7000]);
 });
+
+test('revize: výdaj po skončení nájmu, návrh u skončeného nájmu, sleva 0 a výdaj v budoucím měsíci', () => {
+  const n = { ...test1(), konec: '2026-09' };
+  const zaplaceno = [{ ...platba('a', '2026-08-05', 10000), zaMesic: '2026-08' }, { ...platba('b', '2026-09-05', 10000), zaMesic: '2026-09' }];
+  const s = stavNajemnika(n, zaplaceno, DNES, [{ datum: '2026-10-10', castka: 5000 }]);
+  assert.equal(s.dluh, 5000, 'škoda po odstěhování se počítá');
+  assert.equal(navrhPlatby({ ...test1(), konec: '2026-09' }, zaplaceno, DNES).castka, 0, 'skončený nájem bez dluhu → nic');
+  const novy = { ...test1(), zacatek: '2026-10', predpisy: [{ od: '2026-10', slozky: [{ nazev: 'Nájem', castka: 10000 }] }], platiDopredu: true };
+  assert.equal(navrhPlatby({ ...novy, upravy: [{ mesic: '2026-11', castka: 0 }] }, [], DNES).zaMesic, '2026-12', 'listopad se slevou 0 je „zaplacený“');
+  assert.equal(navrhPlatby(novy, [], DNES, [{ datum: '2026-11-03', castka: 2000 }]).castka, 10000);
+  assert.equal(navrhPlatby(novy, [], DNES, [{ datum: '2026-11-03', castka: 2000 }]).mel, 12000, 'výdaj v budoucím měsíci v předpisu');
+});

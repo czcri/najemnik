@@ -115,6 +115,12 @@ export default function Detail() {
           </p>
         </section>
 
+        {s.dluh > 0 && Object.keys(s.budouci ?? {}).length > 0 && (
+          <p className="mt-3 rounded-2xl bg-status-due-soft p-3 text-sm text-status-due">
+            Pozor: nájemník dluží {kc(s.dluh)}, ale zároveň má předplaceno za {Object.keys(s.budouci!).sort().map(m => nazevMesice(m)).join(', ')}.
+            Pokud ta platba patří k dluhu, otevřete ji v Platbách a změňte „Za měsíc“.
+          </p>
+        )}
         <MalyGraf najemnik={n} platby={platby} />
 
         <button onClick={() => setOkno({ typ: 'platba' })} className="card-hero mt-4 flex h-14 w-full items-center justify-center gap-2 text-base font-bold active:scale-[0.98]"><Plus className="size-5" />Platba</button>

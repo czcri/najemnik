@@ -1,5 +1,5 @@
 // Statistiky (spec. kap. 12) – čistá logika, testuje se v node.
-import { stavNajemnika, mesicZData, rozsahMesicu } from './logika.js';
+import { stavNajemnika, mesicZData, rozsahMesicu, dalsiMesic } from './logika.js';
 
 // Skutečný způsob platby: výpis / ručně zapsaný převod = účet, hotově = hotovost.
 // Platby bez zdroje (z pilotu) se řídí tím, jak nájemník obvykle platí.
@@ -69,10 +69,12 @@ export function statistiky(data, od, doMesice, dnes, filtr = {}) {
     // Kolik z předpisu měsíce je zaplaceno platbami „za“ tento měsíc (pro úspěšnost výběru).
     const pokryto = stavy.reduce((s, x) => s + (x.pokrytoVMesici.get(mesic) ?? 0), 0);
     const den = posledniDen(mesic);
-    // Běžící měsíc ještě není splatný: dluh k dnešku = předpisy ukončených měsíců − dosavadní platby.
+    // Dluh po splatnosti na konci měsíce – stejný výpočet jako v aplikaci, jen s platbami přijatými
+    // do konce toho měsíce (k 1. dni dalšího měsíce); běžící měsíc = stav k dnešku.
     const dluh = mesic === aktualni
       ? stavy.reduce((s, x) => s + x.stav.dluh, 0)
-      : stavy.reduce((s, x) => s + Math.max(0, x.melDo(mesic) - x.zaplatilDo(den)), 0);
+      : stavy.reduce((s, x) => s + stavNajemnika(x.n, x.platby.filter(p => p.datum <= den), `${dalsiMesic(mesic)}-01`,
+        (data.vydaje ?? []).filter(v => v.najemnikId === x.n.id)).dluh, 0);
 
     // Dochvilnost: jen u ukončených měsíců a nájemníků, kteří v měsíci něco měli platit.
     let vcas = 0, pozde = 0, vubec = 0;

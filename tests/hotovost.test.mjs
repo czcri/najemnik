@@ -74,3 +74,9 @@ test('kalendář: odkaz s opakováním a soubor .ics', () => {
   assert.match(ics, /RRULE:FREQ=MONTHLY;BYMONTHDAY=5/);
   assert.match(ics, /DTSTART;VALUE=DATE:20261105/);
 });
+
+test('revize: seznam Hotovost počítá i přebytek z dřívějška (shoda s návrhem platby)', () => {
+  const n = { ...najem('X', 10000), zacatek: '2026-09' };
+  const s = seznamMesice([n], [{ ...platba('X', '2026-09-05', 15000), zaMesic: '2026-09' }], [], '2026-10-10', 'hotove');
+  assert.equal(s.polozky[0].chybi, 5000);
+});

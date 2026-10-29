@@ -71,7 +71,7 @@ export function sparuj(vypis, najemnici, platby, pravidla = prazdnaPravidla()) {
       v.zapamatovatUcet = zapamatovat && !!pohyb.protiucet;
     };
 
-    if (podleUctu.length === 1 && (podleVs.length === 0 || podleVs[0] === podleUctu[0])) {
+    if (podleUctu.length === 1 && (podleVs.length === 0 || podleVs.includes(podleUctu[0]))) {
       return jiste(podleUctu[0], podleVs.length ? 'Účet plátce i VS' : 'Známý účet plátce');
     }
     if (podleUctu.length > 1) {
@@ -149,15 +149,22 @@ export function zaMesicZeZpravy(zprava, datum) {
   const t = bezDiakritiky(zprava);
   const rokPlatby = +datum.slice(0, 4);
   let mesic = null, rok = null;
-  const cisla = t.match(/(?:^|[^\d])(\d{1,2})\s*[/.\-]\s*(20\d{2})(?!\d)/);
-  if (cisla && +cisla[1] >= 1 && +cisla[1] <= 12) { mesic = +cisla[1]; rok = +cisla[2]; }
-  if (!mesic) {
-    for (const slovo of t.split(/[^a-z0-9]+/)) {
-      const nalez = MESICE_ZE_ZPRAVY.find(([k]) => slovo === k);
-      if (nalez) { mesic = nalez[1]; break; }
-    }
-    const r = t.match(/(?:^|[^\d])(20\d{2})(?!\d)/);
-    if (mesic && r) rok = +r[1];
+  // 1) Název měsíce má přednost („platba 5.10.2026 za listopad“ = listopad).
+  for (const slovo of t.split(/[^a-z0-9]+/)) {
+    const nalez = MESICE_ZE_ZPRAVY.find(([k]) => slovo === k);
+    if (nalez) { mesic = nalez[1]; break; }
+  }
+  // Celá data „d.m.rrrr“ odstranit – nejsou to označení měsíce.
+  const bezDat = t.replace(/\d{1,2}\s*\.\s*\d{1,2}\s*\.\s*\d{4}/g, ' ');
+  if (mesic) {
+    const r = bezDat.match(/(?:^|[^\d])(20\d{2})(?!\d)/);
+    if (r) rok = +r[1];
+  } else {
+    // 2) „10/2026“, „10.2026“, „10-2026“, „2026-10“, „10/26“
+    const mr = bezDat.match(/(?:^|[^\d])(\d{1,2})\s*[/.\-]\s*(20\d{2}|\d{2})(?![\d.])/);
+    const rm = bezDat.match(/(?:^|[^\d])(20\d{2})-(\d{1,2})(?!\d)/);
+    if (rm && +rm[2] >= 1 && +rm[2] <= 12) { mesic = +rm[2]; rok = +rm[1]; }
+    else if (mr && +mr[1] >= 1 && +mr[1] <= 12) { mesic = +mr[1]; rok = mr[2].length === 2 ? 2000 + +mr[2] : +mr[2]; }
   }
   if (!mesic) return null;
   if (!rok) {

@@ -89,11 +89,15 @@ export function stavNajemnika(najemnik, platby, dnes, vydaje = []) {
     return { mel: 0, zaplatil, dluh: 0, tentoMesic: 0, preplatek: zaplatil, stav: zaplatil > 0 ? 'preplatek' : 'ok', radky: [], budouci };
   }
 
-  // Výdaje do měsíce podle data (mimo rozsah ke krajnímu měsíci); výdaj s datem v budoucnu až v jeho měsíci.
+  // Výdaje do měsíce podle data (mimo rozsah ke krajnímu měsíci); výdaj s datem v budoucnu až v jeho měsíci,
+  // u skončeného nájmu výdaj po konci (např. škoda při odstěhování) do posledního měsíce.
   const vydajeVMesici = new Map();
   for (const v of vydaje) {
     let m = mesicZData(v.datum);
-    if (m > posledni) continue;
+    if (m > posledni) {
+      if (!ukonceny || m > aktualni) continue;
+      m = posledni;
+    }
     if (m < mesice[0]) m = mesice[0];
     vydajeVMesici.set(m, (vydajeVMesici.get(m) ?? 0) + v.castka);
   }
@@ -145,22 +149,30 @@ export function navrhPlatby(najemnik, platby, dnes, vydaje = [], zaMesic = null)
   const pokrytiMesice = m => {
     const r = s.radky.find(x => x.mesic === m);
     if (r) return { mel: r.mel, najem: r.najem, pokryto: r.mel - r.chybi };
-    const najem = najemVMesici(najemnik, m) || aktualniNajem(najemnik, dnes);
-    return { mel: najem, najem, pokryto: Math.min(najem, s.budouci?.[m] ?? 0) };
+    // Budoucí měsíc: nájem toho měsíce (i upravený na 0) + výdaje s datem v něm.
+    const najem = predpisVMesici(najemnik, m) || upravaVMesici(najemnik, m) ? najemVMesici(najemnik, m) : aktualniNajem(najemnik, dnes);
+    const vydaj = vydaje.filter(v => mesicZData(v.datum) === m).reduce((x, v) => x + v.castka, 0);
+    return { mel: najem + vydaj, najem, pokryto: Math.min(najem + vydaj, s.budouci?.[m] ?? 0) };
   };
+  const ukonceny = !!najemnik.konec && najemnik.konec < aktualni;
   let m = zaMesic;
   if (!m) {
     m = s.radky.find(r => r.mesic < aktualni && r.chybi > 0)?.mesic;
     if (!m) {
       m = najemnik.platiDopredu ? dalsiMesic(aktualni) : aktualni;
       if (m < najemnik.zacatek) m = najemnik.zacatek;
+      if (ukonceny) {
+        // Skončený nájem bez dluhu: nic dalšího se neplatí.
+        return { zaMesic: najemnik.konec, castka: 0, doplatek: false, zaplaceno: 0, mel: 0, skoncil: true };
+      }
       for (let i = 0; i < 24 && pokrytiMesice(m).pokryto >= pokrytiMesice(m).mel; i++) m = dalsiMesic(m);
     }
   }
   const p = pokrytiMesice(m);
   const chybi = p.mel - p.pokryto;
   if (p.pokryto > 0 && chybi > 0) return { zaMesic: m, castka: chybi, doplatek: true, zaplaceno: p.pokryto, mel: p.mel };
-  return { zaMesic: m, castka: p.najem, doplatek: false, zaplaceno: p.pokryto, mel: p.mel };
+  // Nic zaplaceno: pravidelný nájem; má-li měsíc jen výdaj (nájem 0), tak výdaj.
+  return { zaMesic: m, castka: p.najem || p.mel, doplatek: false, zaplaceno: p.pokryto, mel: p.mel };
 }
 
 export const jeUkonceny = (najemnik, dnes) => !!najemnik.konec && najemnik.konec < mesicZData(dnes);

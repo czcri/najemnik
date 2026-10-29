@@ -19,12 +19,15 @@ test('v měsíci: platba dopředu (v září 40 000 za září i říjen) → dl
   const p = [platba('A', '2026-09-05', 20000, '2026-09'), platba('A', '2026-09-05', 20000, '2026-10')];
   assert.deepEqual(dluhyVMesici([najem('A')], p, [], DNES, '2026-09'), []);
   assert.deepEqual(dluhyVMesici([najem('A')], p, [], DNES, '2026-10'), []);
-  // jedna platba 40 000 (i bez určení měsíce) → přebytek kryje říjen
+  // jedna platba 40 000 (i bez určení měsíce), nájem od září → přebytek kryje říjen
+  const odZari = { ...najem('A'), zacatek: '2026-09' };
   const jedna = [platba('A', '2026-09-05', 40000)];
-  assert.deepEqual(dluhyVMesici([najem('A')], jedna, [], DNES, '2026-09'), []);
-  assert.deepEqual(dluhyVMesici([najem('A')], jedna, [], DNES, '2026-10'), []);
+  assert.deepEqual(dluhyVMesici([odZari], jedna, [], DNES, '2026-09'), []);
+  assert.deepEqual(dluhyVMesici([odZari], jedna, [], DNES, '2026-10'), []);
   // v listopadu už přebytek není → dluh v listopadu (běží)
-  assert.equal(dluhyVMesici([najem('A')], jedna, [], DNES, '2026-11')[0].dluh, 20000);
+  assert.equal(dluhyVMesici([odZari], jedna, [], DNES, '2026-11')[0].dluh, 20000);
+  // srpen nezaplacen, v září 40 000 bez určení → doplatí srpen + září; říjen tím předplacený NENÍ
+  assert.equal(dluhyVMesici([najem('A')], jedna, [], DNES, '2026-10')[0].dluh, 20000);
   // nedoplatek ze září se do října nepřenáší
   assert.equal(dluhyVMesici([najem('A')], [platba('A', '2026-09-05', 15000), platba('A', '2026-10-05', 20000)], [], DNES, '2026-10').length, 0);
 });

@@ -19,8 +19,9 @@ export function dluhyZaMesic(najemnici, platby, vydaje, dnes, mesic) {
 
 /**
  * „V měsíci“: předpis měsíce (nájem + úpravy + výdaje) vs. co v tom měsíci skutečně přišlo (podle data,
- * bez ohledu na to, za který měsíc) + přebytek z předchozích měsíců (platba dopředu / přeplatek).
- * Nedoplatek z předchozích měsíců se sem nepřenáší (ten je v „Za měsíc“ / „Celkem“).
+ * za tento nebo starší měsíc) + co bylo za tento měsíc zaplaceno předem + volný přebytek z dřívějška.
+ * Platba přijatá v měsíci za budoucí měsíc se počítá až v něm. Nedoplatek z dřívějška se do měsíce
+ * jako dluh nepřenáší, ale nejdřív „spotřebuje“ pozdější přebytek (peníze na starý dluh nejsou předplatné).
  * @returns [{ najemnik, mel, prijato, predplaceno, dluh }], seřazeno od největšího
  */
 export function dluhyVMesici(najemnici, platby, vydaje, dnes, mesic) {
@@ -28,18 +29,26 @@ export function dluhyVMesici(najemnici, platby, vydaje, dnes, mesic) {
   for (const n of najemnici) {
     const [p, v] = dataNajemnika(n, platby, vydaje);
     const radky = stavNajemnika(n, p, dnes, v).radky;
-    const prijatoV = m => p.filter(x => mesicZData(x.datum) === m).reduce((s, x) => s + x.castka, 0);
-    let prebytek = 0;
+    if (!radky.length) continue;
+    const zacatek = radky[0].mesic;
+    // Měsíc přijetí (platby před začátkem nájmu do prvního měsíce) a měsíc, za který platba je.
+    const polozky = p.map(x => {
+      const prijat = mesicZData(x.datum) < zacatek ? zacatek : mesicZData(x.datum);
+      const za = obdobiPlatby(x, n);
+      return { prijat, za: za < zacatek ? zacatek : za, castka: x.castka };
+    });
+    let bilance = 0;
     for (const r of radky) {
       if (r.mesic > mesic) break;
-      // Platby z doby před začátkem nájmu patří do prvního měsíce.
-      const prijato = prijatoV(r.mesic) + (r === radky[0] ? p.filter(x => mesicZData(x.datum) < r.mesic).reduce((s, x) => s + x.castka, 0) : 0);
+      const prijato = polozky.filter(x => x.prijat === r.mesic && x.za <= r.mesic).reduce((s, x) => s + x.castka, 0);
+      const predem = polozky.filter(x => x.prijat < r.mesic && x.za === r.mesic).reduce((s, x) => s + x.castka, 0);
+      const volnyPrebytek = Math.max(0, bilance);
       if (r.mesic === mesic) {
-        const dluh = r.mel - prijato - prebytek;
-        if (r.mel > 0 && dluh > 0) vysledek.push({ najemnik: n, mel: r.mel, prijato, predplaceno: prebytek, dluh });
+        const dluh = r.mel - prijato - predem - volnyPrebytek;
+        if (r.mel > 0 && dluh > 0) vysledek.push({ najemnik: n, mel: r.mel, prijato, predplaceno: predem + volnyPrebytek, dluh });
         break;
       }
-      prebytek = Math.max(0, prebytek + prijato - r.mel);
+      bilance += prijato + predem - r.mel;
     }
   }
   return vysledek.sort((a, b) => b.dluh - a.dluh);
