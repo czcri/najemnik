@@ -1,6 +1,6 @@
 // Data a záloha (Nastavení): záloha do telefonu, poslat jinam, obnova.
 import { Download, Share2, Upload } from 'lucide-react';
-import { useToast } from './ui';
+import { usePotvrzeni, useToast } from './ui';
 import { useData } from '../data/store';
 import { datumCz, pocet } from '../lib/format';
 import { ZALOHA_PO_DNECH, lzeSdilet, prectiZalohu, sdilejZalohu, stahniZalohu, zalohaStara } from '../lib/zaloha';
@@ -8,6 +8,7 @@ import { ZALOHA_PO_DNECH, lzeSdilet, prectiZalohu, sdilejZalohu, stahniZalohu, z
 export function Zaloha() {
   const { data, dnes, akce } = useData();
   const toast = useToast();
+  const potvrd = usePotvrzeni();
   const stara = zalohaStara(data.nastaveni.posledniZaloha, dnes, data.najemnici.length > 0);
   const oznac = () => akce.ulozNastaveni({ ...data.nastaveni, posledniZaloha: dnes });
 
@@ -16,7 +17,11 @@ export function Zaloha() {
     try {
       const { data: z, varovani } = await prectiZalohu(f);
       const pocty = (d: typeof z) => `${d.najemnici.length} nájemníků, ${d.platby.length} plateb, ${d.vydaje.length} výdajů, ${d.upominky.length} upomínek`;
-      if (!confirm(`Obnovit ze zálohy ${f.name}?\n\nV záloze: ${pocty(z)} + nastavení (šablony, účty).\nTeď v telefonu: ${pocty(data)}.\n\nSoučasná data se NAHRADÍ. Před obnovou se jejich záloha automaticky uloží do Stažených souborů.${varovani.length ? `\n\nPozor: ${varovani.join(' ')}` : ''}`)) return;
+      if (!await potvrd({
+        nadpis: 'Obnovit ze zálohy?', tlacitko: 'Nahradit data zálohou', nebezpecne: true,
+        radky: [{ l: 'Soubor', po: f.name }, { l: 'Teď v telefonu', po: pocty(data) }, { l: 'V záloze', po: `${pocty(z)} + nastavení` }],
+        text: `Současná data se NAHRADÍ. Před obnovou se jejich záloha automaticky uloží do Stažených souborů.${varovani.length ? `\n\nPozor: ${varovani.join(' ')}` : ''}`,
+      })) return;
       if (data.najemnici.length || data.platby.length) stahniZalohu(data);
       await akce.nahradVse(z);
       toast('Data obnovena ze zálohy');

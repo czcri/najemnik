@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CalendarPlus, ChevronRight, Database, Download, Plus, Trash2 } from 'lucide-react';
-import { AppShell, Card, Main, Nadpis, Panel, Pole, Tlacitko, VSTUP, useToast } from '../components/ui';
+import { CalendarPlus, Check, ChevronRight, Database, Download, Plus, Trash2 } from 'lucide-react';
+import { AppShell, Card, Main, Nadpis, Panel, Pole, Tlacitko, VSTUP, usePotvrzeni, useToast, zmeny } from '../components/ui';
 import { LogoSimplySoftware } from '../components/logo';
 import { Zaloha } from '../components/Zaloha';
 import { useData } from '../data/store';
@@ -11,7 +11,7 @@ import { datumCz, kc, noveId, posunMesic } from '../lib/format';
 import { ZNACKY, doplnSablonu } from '../lib/zpravy';
 import type { Najemnik, Sablona } from '../types';
 
-export const VERZE_APLIKACE = '2.11';
+export const VERZE_APLIKACE = '2.12';
 
 const UKAZKA: Najemnik = {
   id: 'x', jmeno: 'Jana Nováková', osloveni: 'paní Nováková', oznaceni: 'Byt 2 – Kolín', zacatek: '2026-01', konec: null,
@@ -21,24 +21,46 @@ const UKAZKA: Najemnik = {
 export default function Nastaveni() {
   const { data, dnes, akce } = useData();
   const toast = useToast();
+  const potvrd = usePotvrzeni();
   const n = data.nastaveni;
   const [vybrana, setVybrana] = useState(n.sablony[0]?.id ?? '');
   const sablona = n.sablony.find(s => s.id === vybrana);
   const [ucet, setUcet] = useState({ ucet: '', nazev: '' });
+  // Úpravy šablony a názvů účtů se drží jen ve formuláři; uloží se až tlačítkem Uložit po potvrzení.
+  const [koncept, setKoncept] = useState<Sablona | null>(null);
+  const upravovana = koncept?.id === vybrana ? koncept : sablona;
+  const zmenena = !!koncept && koncept.id === vybrana && (koncept.nazev !== sablona?.nazev || koncept.text !== sablona?.text);
+  const [nazvy, setNazvy] = useState<Record<string, string>>({});
 
   const ulozSablony = (sablony: Sablona[]) => akce.ulozNastaveni({ ...n, sablony });
-  const upravSablonu = (zmena: Partial<Sablona>) => ulozSablony(n.sablony.map(s => (s.id === vybrana ? { ...s, ...zmena } : s)));
+  const upravSablonu = (zmena: Partial<Sablona>) => upravovana && setKoncept({ ...upravovana, ...zmena });
 
-  function pridejSablonu() {
+  async function ulozSablonu() {
+    if (!koncept || !sablona || !zmenena) return;
+    const radky = zmeny(sablona, koncept, [{ l: 'Název', v: s => s.nazev }, { l: 'Text', v: s => s.text }]);
+    if (!await potvrd({ nadpis: 'Uložit šablonu?', radky })) return;
+    await ulozSablony(n.sablony.map(s => (s.id === koncept.id ? koncept : s)));
+    setKoncept(null);
+    toast('Šablona uložena');
+  }
+  async function pridejSablonu() {
     const nova = { id: noveId(), nazev: 'Nová šablona', text: 'Dobrý den {osloveni}, ' };
-    ulozSablony([...n.sablony, nova]);
+    if (!await potvrd({ nadpis: 'Přidat šablonu?', radky: [{ l: 'Název', po: nova.nazev }], tlacitko: 'Přidat šablonu' })) return;
+    await ulozSablony([...n.sablony, nova]);
     setVybrana(nova.id);
   }
-  function smazSablonu() {
-    if (!sablona || !confirm(`Smazat šablonu „${sablona.nazev}“?`)) return;
+  async function smazSablonu() {
+    if (!sablona || !await potvrd({ nadpis: 'Smazat šablonu?', radky: [{ l: 'Šablona', po: sablona.nazev }], tlacitko: 'Smazat šablonu', nebezpecne: true })) return;
     const zbyle = n.sablony.filter(s => s.id !== vybrana);
-    ulozSablony(zbyle);
+    await ulozSablony(zbyle);
+    setKoncept(null);
     setVybrana(zbyle[0]?.id ?? '');
+  }
+  async function vychoziSablony() {
+    if (!await potvrd({ nadpis: 'Vrátit výchozí šablony?', text: 'Vlastní šablony a jejich úpravy se ztratí.', tlacitko: 'Vrátit výchozí', nebezpecne: true })) return;
+    await ulozSablony(VYCHOZI_SABLONY);
+    setKoncept(null);
+    setVybrana(VYCHOZI_SABLONY[0].id);
   }
   async function pridejUcet() {
     const u = normalizujUcet(ucet.ucet);
@@ -46,8 +68,24 @@ export default function Nastaveni() {
     if (n.ucty.some(x => x.ucet === u)) return toast('Účet už je v seznamu');
     const kod = u.split('/')[1];
     const banka = { '2010': 'Fio banka', '0800': 'Česká spořitelna', '0100': 'Komerční banka' }[kod] ?? `banka ${kod}`;
-    await akce.ulozNastaveni({ ...n, ucty: [...n.ucty, { ucet: u, banka, nazev: ucet.nazev.trim() }] });
+    const novy = { ucet: u, banka, nazev: ucet.nazev.trim() };
+    if (!await potvrd({ nadpis: 'Přidat můj účet?', radky: zmeny(undefined, novy, [{ l: 'Účet', v: x => x.ucet }, { l: 'Banka', v: x => x.banka }, { l: 'Název', v: x => x.nazev }]) })) return;
+    await akce.ulozNastaveni({ ...n, ucty: [...n.ucty, novy] });
     setUcet({ ucet: '', nazev: '' });
+  }
+  async function ulozNazevUctu(u: { ucet: string; nazev: string }) {
+    const novy = (nazvy[u.ucet] ?? u.nazev).trim();
+    if (!await potvrd({ nadpis: 'Uložit název účtu?', radky: [{ l: u.ucet, pred: u.nazev || '—', po: novy || '—' }] })) return;
+    await akce.ulozNastaveni({ ...n, ucty: n.ucty.map(x => (x.ucet === u.ucet ? { ...x, nazev: novy } : x)) });
+    setNazvy(({ [u.ucet]: _, ...zbytek }) => zbytek);
+  }
+  async function odeberUcet(u: string) {
+    if (!await potvrd({ nadpis: 'Odebrat účet?', radky: [{ l: 'Účet', po: u }], tlacitko: 'Odebrat účet', nebezpecne: true })) return;
+    await akce.ulozNastaveni({ ...n, ucty: n.ucty.filter(x => x.ucet !== u) });
+  }
+  async function zrusPravidlo(u: string) {
+    if (!await potvrd({ nadpis: 'Zrušit pravidlo „není nájem“?', text: 'Platby z tohoto účtu se budou znovu nabízet k přiřazení.', radky: [{ l: 'Účet plátce', po: u }], tlacitko: 'Zrušit pravidlo' })) return;
+    await akce.ulozNastaveni({ ...n, pravidla: { ...n.pravidla, nenajemUcty: n.pravidla.nenajemUcty.filter(x => x !== u) } });
   }
 
   return (
@@ -65,23 +103,28 @@ export default function Nastaveni() {
           ))}
           <button onClick={pridejSablonu} className="flex w-full items-center gap-2 px-4 py-3 text-sm font-bold text-primary"><Plus className="size-4" />Nová šablona</button>
         </Card>
-        {sablona && (
+        {upravovana && (
           <section className="card-soft-2 mt-4 space-y-3 p-4">
-            <Pole label="Název"><input value={sablona.nazev} onChange={e => upravSablonu({ nazev: e.target.value })} className={VSTUP} /></Pole>
+            <Pole label="Název"><input value={upravovana.nazev} onChange={e => upravSablonu({ nazev: e.target.value })} className={VSTUP} /></Pole>
             <Pole label="Text">
-              <textarea value={sablona.text} onChange={e => upravSablonu({ text: e.target.value })} rows={5} className="w-full rounded-2xl border border-border bg-card p-3 text-sm outline-none focus:border-primary" />
+              <textarea value={upravovana.text} onChange={e => upravSablonu({ text: e.target.value })} rows={5} className="w-full rounded-2xl border border-border bg-card p-3 text-sm outline-none focus:border-primary" />
             </Pole>
             <div className="flex flex-wrap gap-1.5">
-              {ZNACKY.map(z => <button key={z} onClick={() => upravSablonu({ text: `${sablona.text}{${z}}` })} className="rounded-full bg-primary-soft px-2.5 py-1 text-xs font-semibold text-primary">{`{${z}}`}</button>)}
+              {ZNACKY.map(z => <button key={z} onClick={() => upravSablonu({ text: `${upravovana.text}{${z}}` })} className="rounded-full bg-primary-soft px-2.5 py-1 text-xs font-semibold text-primary">{`{${z}}`}</button>)}
             </div>
             <div>
               <p className="text-xs font-bold text-muted-foreground">Náhled</p>
-              <p className="mt-1 rounded-2xl bg-status-ok-soft p-3 text-sm">{doplnSablonu(sablona.text, UKAZKA, { dluh: 12000, tentoMesic: 12000 }, dnes, n)}</p>
+              <p className="mt-1 rounded-2xl bg-status-ok-soft p-3 text-sm">{doplnSablonu(upravovana.text, UKAZKA, { dluh: 12000, tentoMesic: 12000 }, dnes, n)}</p>
             </div>
+            {zmenena && (
+              <div className="grid grid-cols-2 gap-2">
+                <button onClick={ulozSablonu} className="card-hero flex h-11 items-center justify-center gap-2 text-sm font-bold"><Check className="size-4" />Uložit šablonu</button>
+                <button onClick={() => setKoncept(null)} className="h-11 rounded-2xl bg-muted text-sm font-bold">Zrušit úpravy</button>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-2">
               <button onClick={smazSablonu} className="flex h-11 items-center justify-center gap-2 rounded-2xl bg-status-debt-soft text-sm font-bold text-status-debt"><Trash2 className="size-4" />Smazat</button>
-              <button onClick={() => { if (confirm('Vrátit výchozí šablony? Vlastní úpravy se ztratí.')) { ulozSablony(VYCHOZI_SABLONY); setVybrana(VYCHOZI_SABLONY[0].id); } }}
-                className="h-11 rounded-2xl bg-muted text-sm font-bold">Výchozí šablony</button>
+              <button onClick={vychoziSablony} className="h-11 rounded-2xl bg-muted text-sm font-bold">Výchozí šablony</button>
             </div>
           </section>
         )}
@@ -94,13 +137,17 @@ export default function Nastaveni() {
           {n.ucty.map(u => (
             <div key={u.ucet} className="flex items-center gap-3 px-4 py-3">
               <div className="min-w-0 flex-1">
-                <input value={u.nazev} placeholder={u.banka} onChange={e => akce.ulozNastaveni({ ...n, ucty: n.ucty.map(x => (x.ucet === u.ucet ? { ...x, nazev: e.target.value } : x)) })}
+                <input value={nazvy[u.ucet] ?? u.nazev} placeholder={u.banka} onChange={e => setNazvy({ ...nazvy, [u.ucet]: e.target.value })}
                   className="w-full bg-transparent text-sm font-bold outline-none placeholder:text-foreground" />
                 <p className="text-xs text-muted-foreground tabular">{u.ucet} · {u.banka}</p>
               </div>
-              <button aria-label="Odebrat účet" className="flex size-11 shrink-0 items-center justify-center rounded-xl active:bg-muted" onClick={() => confirm(`Odebrat účet ${u.ucet}?`) && akce.ulozNastaveni({ ...n, ucty: n.ucty.filter(x => x.ucet !== u.ucet) })}>
-                <Trash2 className="size-5 text-muted-foreground" />
-              </button>
+              {nazvy[u.ucet] !== undefined && nazvy[u.ucet].trim() !== u.nazev
+                ? <button aria-label="Uložit název účtu" className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary" onClick={() => ulozNazevUctu(u)}>
+                    <Check className="size-5" />
+                  </button>
+                : <button aria-label="Odebrat účet" className="flex size-11 shrink-0 items-center justify-center rounded-xl active:bg-muted" onClick={() => odeberUcet(u.ucet)}>
+                    <Trash2 className="size-5 text-muted-foreground" />
+                  </button>}
             </div>
           ))}
         </Card>
@@ -116,7 +163,7 @@ export default function Nastaveni() {
               {n.pravidla.nenajemUcty.map(u => (
                 <div key={u} className="flex items-center gap-3 px-4 py-3 text-sm tabular">
                   <span className="flex-1">{u}</span>
-                  <button aria-label="Zrušit pravidlo" className="flex size-11 shrink-0 items-center justify-center rounded-xl active:bg-muted" onClick={() => confirm(`Platby z účtu ${u} znovu nabízet k přiřazení?`) && akce.ulozNastaveni({ ...n, pravidla: { ...n.pravidla, nenajemUcty: n.pravidla.nenajemUcty.filter(x => x !== u) } })}>
+                  <button aria-label="Zrušit pravidlo" className="flex size-11 shrink-0 items-center justify-center rounded-xl active:bg-muted" onClick={() => zrusPravidlo(u)}>
                     <Trash2 className="size-5 text-muted-foreground" />
                   </button>
                 </div>

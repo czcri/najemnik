@@ -1,8 +1,8 @@
 import { useMemo, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { Banknote, CheckCircle2, Landmark, Search } from 'lucide-react';
-import { AppShell, Chyba, Main, NapovedaCastky, Pole, Prepinac, Tlacitko, VSTUP, VolbaMesice, ZpusobIkona, useChrana, useToast } from '../components/ui';
-import { vysledekPoPlatbe } from '../components/formulare';
+import { AppShell, Chyba, Main, NapovedaCastky, Pole, Prepinac, Tlacitko, VSTUP, VolbaMesice, ZpusobIkona, useChrana, usePotvrzeni, useToast, zmeny } from '../components/ui';
+import { polePlatby, vysledekPoPlatbe } from '../components/formulare';
 import { useData } from '../data/store';
 import { aktualniNajem, mesicZData, navrhPlatby, parseCastka, stavNajemnika } from '../lib/core';
 import { kc, nazevMesice, noveId, posunMesic } from '../lib/format';
@@ -13,6 +13,7 @@ const bezDiakritiky = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').
 export default function VlozitPlatbu() {
   const { data, dnes, prehled, akce } = useData();
   const toast = useToast();
+  const potvrd = usePotvrzeni();
   const [busy, chran] = useChrana();
   const aktivni = prehled.filter(r => !r.ukonceny);
   // Nikoho nepředvybírat – aby se platba omylem nezapsala jinému nájemníkovi.
@@ -26,6 +27,8 @@ export default function VlozitPlatbu() {
   const [zaMesic, setZaMesic] = usePamet('vlozit:zaMesic', navrhPro()?.zaMesic ?? mesicZData(dnes));
   const navrh = (x = r, m?: string) => String(navrhPro(x, m)?.castka ?? '');
   const [castka, setCastka] = usePamet('vlozit:castka', navrh(r, zaMesic));
+  // Napsaná částka zůstává pevná – změna měsíce, nájemníka ani ničeho jiného ji nepřepíše návrhem.
+  const [vlastni, setVlastni] = usePamet('vlozit:vlastni', false);
   const [zpusob, setZpusob] = usePamet<'prevod' | 'hotove'>('vlozit:zpusob', r?.najemnik.zpusobPlaceni === 'hotove' ? 'hotove' : 'prevod');
   const [datum, setDatum] = usePamet('vlozit:datum', dnes);
   const [poznamka, setPoznamka] = usePamet('vlozit:poznamka', '');
@@ -39,7 +42,7 @@ export default function VlozitPlatbu() {
     setId(novyId);
     const n = navrhPro(x);
     setZaMesic(n?.zaMesic ?? mesicZData(dnes));
-    setCastka(String(n?.castka ?? ''));
+    if (!vlastni) setCastka(String(n?.castka ?? ''));
     setZpusob(x?.najemnik.zpusobPlaceni === 'hotove' ? 'hotove' : 'prevod');
     setHledat('');
   }
@@ -51,6 +54,7 @@ export default function VlozitPlatbu() {
     if (!c) return setChyba('Částka musí být kladné celé číslo v korunách.');
     if (!/^\d{4}-\d{2}-\d{2}$/.test(datum)) return setChyba('Vyplňte datum.');
     const platba = { id: noveId(), najemnikId: r.najemnik.id, datum, castka: c, zaMesic, poznamka: poznamka.trim(), zdroj: { typ: zpusob } as const };
+    if (!await potvrd({ nadpis: 'Uložit platbu?', radky: zmeny(undefined, platba, polePlatby(r.najemnik)), tlacitko: 'Uložit platbu' })) return;
     await akce.ulozPlatbu(platba);
     // Výsledek spočítat hned z nových dat (stav v kontextu se obnoví až po překreslení).
     const s = stavNajemnika(r.najemnik, [...data.platby.filter(p => p.najemnikId === r.najemnik.id), platba], dnes, data.vydaje.filter(v => v.najemnikId === r.najemnik.id));
@@ -66,7 +70,7 @@ export default function VlozitPlatbu() {
           <h2 className={`mt-6 text-2xl font-extrabold ${hotovo.ok ? '' : hotovo.dluh ? 'text-status-debt' : 'text-status-due'}`}>{hotovo.text}</h2>
           {hotovo.dalsi && <p className="mt-1 font-semibold text-status-due">{hotovo.dalsi}</p>}
           <p className="mt-2 text-muted-foreground">{hotovo.jmeno} · {kc(hotovo.castka)} · {zpusob === 'prevod' ? 'převodem' : 'hotově'}</p>
-          <Tlacitko className="mt-8" onClick={() => { setHotovo(null); setPoznamka(''); setId(''); setDatum(dnes); }}>Zapsat další platbu</Tlacitko>
+          <Tlacitko className="mt-8" onClick={() => { setHotovo(null); setPoznamka(''); setId(''); setDatum(dnes); setCastka(''); setVlastni(false); }}>Zapsat další platbu</Tlacitko>
           <Link to={`/najemnici/${hotovo.id}`} className="mt-3 flex h-14 w-full items-center justify-center rounded-[20px] bg-muted font-bold">Detail nájemníka</Link>
         </Main>
       </AppShell>
@@ -129,16 +133,17 @@ export default function VlozitPlatbu() {
           {r && <>
           <Pole label="Částka">
             <div className="card-soft flex h-20 items-center px-5">
-              <input inputMode="numeric" value={castka} onChange={e => setCastka(e.target.value)} className="min-w-0 flex-1 bg-transparent text-[34px] font-extrabold tabular outline-none" />
+              <input inputMode="numeric" value={castka} onChange={e => { setCastka(e.target.value); setVlastni(true); }} className="min-w-0 flex-1 bg-transparent text-[34px] font-extrabold tabular outline-none" />
               <span className="text-xl font-bold text-muted-foreground">Kč</span>
             </div>
-            {r && <NapovedaCastky navrh={navrhPro(r, zaMesic)!} mesic={nazevMesice(zaMesic)} />}
+            {r && <NapovedaCastky navrh={navrhPro(r, zaMesic)!} mesic={nazevMesice(zaMesic)} vlastni={vlastni && castka !== navrh(r, zaMesic)}
+              onPouzit={() => { setCastka(navrh(r, zaMesic)); setVlastni(false); }} />}
           </Pole>
           {r && (
             <div>
               <span className="mb-1.5 block px-1 text-sm font-bold text-muted-foreground">Za měsíc</span>
               <VolbaMesice hodnota={zaMesic} min={r.najemnik.zacatek} max={posunMesic(mesicZData(dnes), 12)}
-                onChange={m => { setZaMesic(m); setCastka(navrh(r, m)); }} />
+                onChange={m => { setZaMesic(m); if (!vlastni) setCastka(navrh(r, m)); }} />
             </div>
           )}
           <Pole label="Způsob platby">

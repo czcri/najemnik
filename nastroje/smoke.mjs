@@ -86,6 +86,13 @@ async function snimek(nazev, celaStranka = true) {
   const { data } = await cdp('Page.captureScreenshot', { format: 'png', captureBeyondViewport: celaStranka });
   await writeFile(path.join(SNIMKY, `${String(++cislo).padStart(2, '0')}-${nazev}.png`), Buffer.from(data, 'base64'));
 }
+// Potvrzovací panel (každá změna dat): klik na hlavní tlačítko panelu.
+async function potvrdit() {
+  const ok = await js(`(() => { const b = document.querySelector('[data-potvrzeni] button'); if (!b) return false; b.click(); return true; })()`);
+  if (!ok) throw new Error('Potvrzovací panel se neotevřel');
+  await pockej(400);
+}
+const hodnotaPole = popis => js(`[...document.querySelectorAll('label')].find(l => l.querySelector('span')?.innerText.trim() === ${JSON.stringify(popis)})?.querySelector('input')?.value ?? ''`);
 let selhani = 0;
 function over(podminka, popis, detail = '') {
   console.log(`${podminka ? '✔' : '✖'} ${popis}${podminka ? '' : ` ${detail}`}`);
@@ -102,7 +109,7 @@ try {
   await cdp('Page.addScriptToEvaluateOnNewDocument', { source: `{
     const D = Date, T = new D(2026, 9, 15, 12).getTime();
     globalThis.Date = class extends D { constructor(...a) { super(...(a.length ? a : [T])); } static now() { return T; } };
-    window.confirm = () => true;
+    window.confirm = () => { console.error('použito systémové okénko confirm'); return true; };
   }` });
 
   // 1) Převzetí dat z pilotu: připravit starou databázi 'najemnik' a pak spustit novou verzi.
@@ -153,6 +160,9 @@ try {
   await klik('Nový nájemník');
   await vypln({ 'Jméno *': 'Jan Testovací', 'Nemovitost *': 'Byt 1 – Kolín', 'Nájem od *': '2026-08', 'Nájem vč. služeb *': '10000', 'Telefon': '777 123 456', 'Variabilní symbol': '1001' });
   await klik('Uložit');
+  t = await text();
+  over(t.includes('Přidat nájemníka?') && t.includes('Jan Testovací') && t.includes('Byt 1 – Kolín'), 'nový nájemník: potvrzení se souhrnem údajů');
+  await potvrdit();
   await pockej(500);
   t = await text();
   over(t.includes('Dluží ' + kc(20000)) && t.includes('chybí ' + kc(10000)), '1: dluh 20 000 + tento měsíc 10 000', t.slice(0, 300));
@@ -161,10 +171,24 @@ try {
   await klik('Platba');
   t = await text();
   over(t.includes('Za měsíc') && t.includes('Srpen 2026'), 'platba: za měsíc předvybrán nejstarší nezaplacený (srpen)');
+  await vypln({ 'Částka': '7777' });
+  await klik('Další měsíc', -1);
+  t = await text();
+  over(await hodnotaPole('Částka') === '7777' && t.includes('Září 2026') && t.includes('Vlastní částka'), 'platba: napsaná částka zůstane i po změně měsíce', await hodnotaPole('Částka'));
+  await klik('Použít návrh');
+  over(await hodnotaPole('Částka') === '10000', 'platba: „Použít návrh“ vrátí návrh pro měsíc', await hodnotaPole('Částka'));
+  await klik('Předchozí měsíc', -1);
   await vypln({ 'Částka': '10000', 'Datum': '2026-10-05', 'Poznámka': 'za srpen' });
   await klik('Hotově');
+  const platebPred = await pocetVDb('platby');
   await klik('Uložit platbu');
-  await pockej(400);
+  t = await text();
+  over(t.includes('Uložit platbu?') && t.toLowerCase().includes('srpen 2026') && t.includes('hotově') && t.includes(kc(10000)) && await pocetVDb('platby') === platebPred, 'platba: potvrzení se souhrnem, bez potvrzení nic neuloženo');
+  await snimek('potvrzeni-platby', false);
+  await klik('Zpět k úpravám');
+  over((await text()).includes('Za měsíc') && await pocetVDb('platby') === platebPred, 'Zpět k úpravám: formulář zůstane, nic neuloženo');
+  await klik('Uložit platbu');
+  await potvrdit();
   t = await text();
   over(t.includes('Dluží ' + kc(10000)) && t.includes('Hotově'), 'platba hotově: dluh 10 000, štítek Hotově');
 
@@ -178,7 +202,7 @@ try {
   await klik('Výdaj / dluh');
   await vypln({ 'Popis': 'Oprava bojleru', 'Částka (Kč)': '2500', 'Datum': '2026-09-10' });
   await klik('Uložit');
-  await pockej(400);
+  await potvrdit();
   t = await text();
   over(t.includes('Dluží ' + kc(12500)), 'výdaj zvýšil dluh na 12 500', t.slice(0, 300));
   await snimek('detail');
@@ -194,13 +218,15 @@ try {
   over(t.includes('Říjen 2026 – měl zaplatit') && t.includes('Standardní nájem v tomto měsíci'), 'klepnutí na měsíc otevře úpravu');
   await vypln({ 'Nájem za tento měsíc (Kč)': '8000', 'Důvod': 'sleva – oprava topení' });
   await klik('Uložit');
-  await pockej(400);
+  t = await text();
+  over(t.includes(kc(10000)) && t.includes(kc(8000)) && t.includes('sleva – oprava topení'), 'úprava měsíce: potvrzení před → po');
+  await potvrdit();
   t = await text();
   over(t.includes('sleva – oprava topení') && t.includes('chybí ' + kc(8000)), 'upravený měsíc: důvod v tabulce, chybí 8 000', t.slice(0, 600));
   await js(`[...document.querySelectorAll('button')].find(b => b.innerText.startsWith('Říjen 26')).click()`);
   await pockej(300);
   await klik('Vrátit standardní nájem (' + kc(10000) + ')');
-  await pockej(400);
+  await potvrdit();
   over((await text()).includes('chybí ' + kc(10000)) && !(await text()).includes('sleva – oprava topení'), 'vrácení standardního nájmu');
   const nid = await js('location.hash.split("/").pop()');
 
@@ -213,10 +239,15 @@ try {
   t = await text();
   over(t.includes('Předvyplněn pravidelný měsíční nájem'), 'vložit platbu: předvyplněn pravidelný nájem (ne dluh)');
   await vypln({ 'Částka': '5000' });
+  await klik('Další měsíc');
+  await klik('Předchozí měsíc');
+  over(await hodnotaPole('Částka') === '5000', 'vložit platbu: napsaná částka zůstane i po změně měsíce', await hodnotaPole('Částka'));
   await klik('Převodem');
   const predDvojklikem = await pocetVDb('platby');
   await js(`(() => { const f = document.querySelector('form'); f.requestSubmit(); f.requestSubmit(); })()`);
-  await pockej(600);
+  await pockej(400);
+  await potvrdit();
+  await pockej(200);
   over(await pocetVDb('platby') === predDvojklikem + 1, 'dvojí odeslání zapíše jen jednu platbu');
   await pockej(500);
   t = await text();
@@ -231,7 +262,7 @@ try {
   await snimek('prehled');
   await klik('O aplikaci');
   t = await text();
-  over(t.includes('verze 2.11') && t.toLowerCase().includes('vytvořilo'), 'panel O aplikaci z loga v záhlaví');
+  over(t.includes('verze 2.12') && t.toLowerCase().includes('vytvořilo'), 'panel O aplikaci z loga v záhlaví');
   await snimek('o-aplikaci', false);
   await klik('Zavřít');
   await jdi('#/dluznici');
@@ -295,6 +326,7 @@ try {
   await klik('Hotově', -1); // přepínač v otevřeném panelu (za ním je stejnojmenný filtr seznamu)
   await vypln({ 'Hotovost čekám k (den v měsíci)': '15' });
   await klik('Uložit');
+  await potvrdit();
   await jdi('#/');
   await pockej(400);
   t = await text();
@@ -318,7 +350,9 @@ try {
   t = await text();
   over(t.includes('Všechna hotovost za tento měsíc převzata') && t.includes('Převzato ' + kc(9000)), 'zaškrtnutí: položka zmizí, platba zapsána');
   await klik('Zpět');
-  await pockej(500);
+  over((await text()).includes('Vrátit zápis platby?'), 'Zpět v oznámení: potvrzení před smazáním');
+  await potvrdit();
+  await pockej(100);
   t = await text();
   over(t.includes('Hana Hotová') && t.includes('čekám dnes'), 'Zpět: platba smazána, položka zpět v seznamu');
   await klik(kc(9000));
@@ -373,7 +407,8 @@ try {
   over(t.includes('1 přiřazeno') && t.includes('1 nepřiřazeno'), 'import: 1 přiřazeno (VS), 1 nepřiřazeno', t.slice(0, 500));
   await snimek('import-nahled');
   await klik('Zapsat 1 platbu');
-  await pockej(500);
+  over((await text()).includes('Zapsat import z výpisu?'), 'import: souhrn před zápisem');
+  await potvrdit();
   await jdi(`#/najemnici/${nid}`);
   t = await text();
   over(t.includes('Výpis · Fio') && t.includes('Vše zaplaceno') === false, 'importovaná platba v detailu se štítkem Výpis · Fio');
@@ -396,7 +431,10 @@ try {
   await klik('Upravit');
   await klik('Dopředu', -1);
   await klik('Uložit');
-  await pockej(500);
+  t = await js(`document.querySelector('[data-potvrzeni]')?.innerText ?? ''`);
+  over(t.includes('Obvykle platí') && t.includes('za běžný měsíc') && t.includes('dopředu') && !t.includes('Jméno') && !t.includes('Telefon'), 'úprava nájemníka: v potvrzení jen změna (před → po)', t);
+  await snimek('potvrzeni-upravy', false);
+  await potvrdit();
   const stavPo = await js(`document.querySelector('.card-navy p:nth-child(2)')?.innerText ?? ''`);
   over(stavPred && stavPred === stavPo, 'přepnutí „platí dopředu“ nezmění dluh', `${stavPred} → ${stavPo}`);
 
@@ -406,7 +444,7 @@ try {
   await jdi('#/najemnici/pilot');
   await klik('Upravit');
   await klik('Smazat nájemníka');
-  await pockej(500);
+  await potvrdit();
   await cdp('Page.reload');
   await pockej(4500);
   await jdi('#/najemnici');

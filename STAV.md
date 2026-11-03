@@ -106,3 +106,16 @@ Odloženo: widget na plochu + skutečné notifikace (nativní obal Capacitor/APK
 ## 2026-10-29 – verze 2.11 (revize, blok 5 – doplnění a drobnosti)
 
 - Viz spec. kap. 20, blok 5. Revize docs/revize-2026-10-29.md uzavřena. Testy: 69 core + kouřový test.
+
+## 2026-11-03 – verze 2.12: pevná částka platby + potvrzování každé změny
+
+Hotovo:
+- Platba (Vložit platbu i z detailu): napsaná částka zůstává pevná – změna měsíce, nájemníka ani ničeho jiného ji nepřepíše návrhem. Pod částkou „Vlastní částka … Návrh pro měsíc: X Kč · Použít návrh“.
+- Potvrzování: společný panel `usePotvrzeni()` (web/src/components/ui.tsx) se souhrnem – nová položka všechny údaje, úprava jen změny (před → po), mazání červeně. Bez potvrzení se nic neuloží; „Zpět k úpravám“ / křížek / systémové Zpět = nic se nemění; úprava bez změn = „Beze změny“.
+- Napojeno: platby (nová, úprava, smazání), nájemník (nový, úprava, smazání), změna nájmu, úprava nájmu v měsíci + vrácení standardního, ukončení nájmu + zrušení, výdaj/dluh, poznámka k dluhu, „Zpět“ v oznámení po převzetí hotovosti, konečný zápis importu (souhrn), obnova ze zálohy, Nastavení (šablony, moje účty, pravidla „není nájem“). Systémová okénka confirm() nahrazena.
+- Nastavení: šablony a názvy účtů se už neukládají při každém písmenu – tlačítko Uložit šablonu / Zrušit úpravy, u názvu účtu ✓.
+- Beze změny (už mají vlastní potvrzovací krok): převzetí hotovosti na hlavní kartě, zápis upomínky po „Odesláno“; automatické označení „zálohováno“.
+- Testy: 69 core + kouřový test 74 kontrol (nově: pevná částka po změně měsíce, Použít návrh, bez potvrzení nic neuloženo, Zpět k úpravám, potvrzení úpravy jen se změnou, žádné systémové confirm()).
+
+Další krok:
+- Sloučit větev `worktree-potvrzovani-zmen` do `main` (push do main = zveřejnění na Pages) a vyzkoušet v telefonu.

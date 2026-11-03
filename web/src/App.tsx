@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { HashRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { DataProvider, useData } from './data/store';
-import { ToastProvider, useToast } from './components/ui';
+import { PotvrzeniProvider, ToastProvider, useToast } from './components/ui';
 import { maKoncept } from './lib/pamet';
 import { Uvod } from './components/Uvod';
 import { Zachrana } from './components/Zachrana';
@@ -62,9 +62,11 @@ export default function App() {
       <Posun />
       <DataProvider>
         <ToastProvider>
-          <Obrazovky />
-          <HlaskaObnovy />
-          <Uvod />
+          <PotvrzeniProvider>
+            <Obrazovky />
+            <HlaskaObnovy />
+            <Uvod />
+          </PotvrzeniProvider>
         </ToastProvider>
       </DataProvider>
     </HashRouter>

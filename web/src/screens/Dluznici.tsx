@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Pencil, Phone, Send } from 'lucide-react';
-import { AppShell, Main, VolbaMesice, Zalozky, ZpusobIkona } from '../components/ui';
+import { AppShell, Main, VolbaMesice, Zalozky, ZpusobIkona, usePotvrzeni } from '../components/ui';
 import { PanelUpominky } from '../components/upominka';
 import { useData, type Prehled } from '../data/store';
 import { datumCz, kc, nazevMesice, pocet, posunMesic } from '../lib/format';
@@ -116,6 +116,7 @@ function KartaMesice({ n, castka, popis, bezi, onZprava }: { n: Najemnik; castka
 
 function KartaDluznika({ r, onZprava }: { r: Prehled; onZprava: () => void }) {
   const { data, dnes, akce } = useData();
+  const potvrd = usePotvrzeni();
   const n = r.najemnik;
   const [text, setText] = usePamet(`dluh:${n.id}:text`, n.poznamkaDluh?.text ?? '', otisk(n.poznamkaDluh));
   const [upravuji, setUpravuji] = usePamet(`dluh:${n.id}:upravuji`, false, otisk(n.poznamkaDluh));
@@ -123,6 +124,12 @@ function KartaDluznika({ r, onZprava }: { r: Prehled; onZprava: () => void }) {
   const upominka = data.upominky.filter(u => u.najemnikId === n.id).sort((a, b) => b.datum.localeCompare(a.datum))[0];
 
   async function ulozPoznamku() {
+    const pred = n.poznamkaDluh?.text ?? '';
+    if (text.trim() === pred) return setUpravuji(false);
+    if (!await potvrd({
+      nadpis: `Poznámka k dluhu · ${n.jmeno}`, tlacitko: text.trim() ? 'Uložit poznámku' : 'Smazat poznámku', nebezpecne: !text.trim(),
+      radky: [{ l: 'Poznámka', pred: pred ? pred : undefined, po: text.trim() || '—' }],
+    })) return;
     await akce.ulozNajemnika({ ...n, poznamkaDluh: text.trim() ? { text: text.trim(), datum: dnes } : undefined });
     setUpravuji(false);
   }

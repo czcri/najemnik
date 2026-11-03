@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { CheckCircle2, FileText, FileUp } from 'lucide-react';
-import { AppShell, Card, Chyba, Main, Nadpis, Tlacitko, useChrana, useToast } from '../components/ui';
+import { AppShell, Card, Chyba, Main, Nadpis, Tlacitko, useChrana, usePotvrzeni, useToast } from '../components/ui';
 import { useData } from '../data/store';
 import {
   jePdf, nactiCsvVypis, nactiKbPdf, prevedImport, sparuj, vychoziRozhodnuti,
@@ -38,6 +38,7 @@ async function prectiSoubor(f: File): Promise<Soubor> {
 export default function Import() {
   const { data, dnes, akce } = useData();
   const toast = useToast();
+  const potvrd = usePotvrzeni();
   const [busy, chran] = useChrana();
   const [soubory, setSoubory] = useState<Soubor[]>([]);
   const [cte, setCte] = useState(false);
@@ -93,6 +94,16 @@ export default function Import() {
     for (const { vypis } of vysledky) {
       if (!ucty.some(u => u.ucet === vypis.ucet)) ucty.push({ ucet: vypis.ucet, banka: BANKY[vypis.banka], nazev: '' });
     }
+    const noveUcty = ucty.length - data.nastaveni.ucty.length;
+    const novaPravidla = pravidla.nenajemUcty.length - data.nastaveni.pravidla.nenajemUcty.length;
+    const radky = [
+      { l: 'Zapíše se', po: `${pocet(platby.length, 'platba', 'platby', 'plateb')} · ${kc(platby.reduce((s, p) => s + p.castka, 0))}` },
+      ...(smazat.length ? [{ l: 'Nahradí se', po: pocet(smazat.length, 'dosavadní platba', 'dosavadní platby', 'dosavadních plateb') }] : []),
+      ...(zmeneni.size ? [{ l: 'Účet plátce se uloží', po: pocet(zmeneni.size, 'nájemníkovi', 'nájemníkům', 'nájemníkům') }] : []),
+      ...(noveUcty > 0 ? [{ l: 'Do Moje účty přibude', po: pocet(noveUcty, 'účet', 'účty', 'účtů') }] : []),
+      ...(novaPravidla > 0 ? [{ l: 'Nová pravidla „není nájem“', po: String(novaPravidla) }] : []),
+    ];
+    if (!await potvrd({ nadpis: 'Zapsat import z výpisu?', radky, tlacitko: 'Zapsat' })) return;
     await akce.davka({
       uloz: { platby, najemnici: [...zmeneni.values()] },
       smaz: { platby: smazat },

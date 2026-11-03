@@ -232,10 +232,16 @@ export function VolbaMesice({ hodnota, onChange, min, max, kompaktni }: {
   );
 }
 
-// Nápověda pod částkou: odkud se vzala předvyplněná částka.
-export const NapovedaCastky = ({ navrh, mesic }: { navrh: { doplatek: boolean; zaplaceno: number; mel: number }; mesic: string }) =>
+// Nápověda pod částkou: odkud se vzala předvyplněná částka. Když uživatel napsal vlastní částku
+// (`vlastni`), zůstává pevná – nápověda jen ukáže návrh pro vybraný měsíc a nabídne jeho použití.
+export const NapovedaCastky = ({ navrh, mesic, vlastni, onPouzit }: {
+  navrh: { castka: number; doplatek: boolean; zaplaceno: number; mel: number }; mesic: string; vlastni?: boolean; onPouzit?: () => void;
+}) =>
   <span className="mt-1 block px-1 text-xs text-muted-foreground">
-    {navrh.doplatek
+    {vlastni && onPouzit
+      ? <>Vlastní částka – změna měsíce ji nepřepíše. Návrh pro {mesic}: <b className="text-foreground">{kc(navrh.castka)}</b>{' '}
+          <button type="button" onClick={onPouzit} className="font-bold text-primary underline">Použít návrh</button></>
+      : navrh.doplatek
       ? <>Předvyplněn <b className="text-status-due">doplatek za {mesic}</b> – zaplaceno už {kc(navrh.zaplaceno)} z {kc(navrh.mel)}.</>
       : navrh.zaplaceno >= navrh.mel && navrh.mel > 0
         ? <>{mesic[0].toUpperCase() + mesic.slice(1)} je už zaplacený celý – předvyplněn pravidelný nájem.</>
@@ -276,3 +282,51 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   );
 }
 export const useToast = () => useContext(ToastCtx);
+
+// Potvrzení každé změny dat: panel se souhrnem (co se uloží, u úprav před → po); uloží se až po „Potvrdit“.
+// Zavření křížkem nebo systémovým Zpět = nic se nemění.
+export type RadekZmeny = { l: string; pred?: string; po: string };
+export type Dotaz = { nadpis: string; radky?: RadekZmeny[]; text?: string; tlacitko?: string; nebezpecne?: boolean };
+const PotvrzeniCtx = createContext<(d: Dotaz) => Promise<boolean>>(async () => false);
+export function PotvrzeniProvider({ children }: { children: ReactNode }) {
+  const [dotaz, setDotaz] = useState<(Dotaz & { odpoved: (ano: boolean) => void }) | null>(null);
+  const potvrd = useCallback((d: Dotaz) => new Promise<boolean>(odpoved => setDotaz({ ...d, odpoved })), []);
+  const zavri = (ano: boolean) => { dotaz?.odpoved(ano); setDotaz(null); };
+  return (
+    <PotvrzeniCtx.Provider value={potvrd}>
+      {children}
+      {dotaz && (
+        <Panel title={dotaz.nadpis} onClose={() => zavri(false)}>
+          <div className="space-y-4" data-potvrzeni>
+            {dotaz.text && <p className="text-sm whitespace-pre-line text-muted-foreground">{dotaz.text}</p>}
+            {!!dotaz.radky?.length && (
+              <div className="card-soft-2 divide-y divide-border overflow-hidden">
+                {dotaz.radky.map(r => (
+                  <div key={r.l} className="flex items-baseline justify-between gap-3 px-4 py-3 text-sm">
+                    <span className="shrink-0 text-muted-foreground">{r.l}</span>
+                    <span className="min-w-0 text-right font-bold break-words">
+                      {r.pred !== undefined && <><s className="font-medium text-muted-foreground">{r.pred}</s> → </>}{r.po}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <Tlacitko typ={dotaz.nebezpecne ? 'nebezpecne' : 'hlavni'} onClick={() => zavri(true)}>{dotaz.tlacitko ?? 'Potvrdit'}</Tlacitko>
+            <Tlacitko typ="vedlejsi" onClick={() => zavri(false)}>Zpět k úpravám</Tlacitko>
+          </div>
+        </Panel>
+      )}
+    </PotvrzeniCtx.Provider>
+  );
+}
+export const usePotvrzeni = () => useContext(PotvrzeniCtx);
+
+// Řádky souhrnu: u nové položky všechny vyplněné údaje, u úpravy jen změněné (před → po).
+export function zmeny<T>(pred: T | undefined, po: T, pole: { l: string; v: (x: T) => string }[]): RadekZmeny[] {
+  return pole.flatMap(p => {
+    const b = p.v(po);
+    if (pred === undefined) return b ? [{ l: p.l, po: b }] : [];
+    const a = p.v(pred);
+    return a === b ? [] : [{ l: p.l, pred: a || '—', po: b || '—' }];
+  });
+}

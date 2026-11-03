@@ -5,7 +5,7 @@ import { Check, ChevronRight, FileUp } from 'lucide-react';
 import { useData } from '../data/store';
 import { parseCastka, seznamMesice, type PolozkaMesice } from '../lib/core';
 import { NazevMesice, datumCz, datumKratce, kc, nazevMesice, noveId, pocet } from '../lib/format';
-import { Chyba, Panel, Pole, Tlacitko, VSTUP, useChrana, useToast } from './ui';
+import { Chyba, Panel, Pole, Tlacitko, VSTUP, useChrana, usePotvrzeni, useToast } from './ui';
 import { mesicZData } from '../lib/core';
 import { usePamet } from '../lib/pamet';
 
@@ -56,6 +56,7 @@ export const HlavniKarta = forwardRef<HlavniKartaRef, { mesic: ReactNode; uvodni
 function StranaSeznamu({ zpusob }: { zpusob: 'hotove' | 'ucet' }) {
   const { data, dnes, akce } = useData();
   const toast = useToast();
+  const potvrd = usePotvrzeni();
   const [upravitId, setUpravitId] = usePamet<string | null>(`prevzeti:${zpusob}`, null);
   const mesic = mesicZData(dnes);
   const s = seznamMesice(data.najemnici, data.platby, data.vydaje, dnes, zpusob);
@@ -68,7 +69,13 @@ function StranaSeznamu({ zpusob }: { zpusob: 'hotove' | 'ucet' }) {
     // Hotovost = „Hotově“; na straně Na účet ruční potvrzení převodu = „Převod – ručně“ (výpis zatím nenahrán).
     const platba = { id: noveId(), najemnikId: p.najemnik.id, datum, castka, zaMesic: p.zaMesic, poznamka: '', zdroj: { typ: hotove ? 'hotove' as const : 'prevod' as const } };
     await akce.ulozPlatbu(platba);
-    toast(`${hotove ? 'Převzato' : 'Zapsán převod'} ${kc(castka)} · ${p.najemnik.jmeno.split(' ')[0]}`, { popis: 'Zpět', onClick: () => akce.smazPlatbu(platba.id) });
+    toast(`${hotove ? 'Převzato' : 'Zapsán převod'} ${kc(castka)} · ${p.najemnik.jmeno.split(' ')[0]}`, {
+      popis: 'Zpět',
+      onClick: async () => {
+        if (await potvrd({ nadpis: 'Vrátit zápis platby?', text: 'Platba se smaže.', radky: [{ l: p.najemnik.jmeno, po: `${kc(castka)} · ${datumCz(datum)}` }], tlacitko: 'Smazat platbu', nebezpecne: true }))
+          await akce.smazPlatbu(platba.id);
+      },
+    });
   }
 
   return (
