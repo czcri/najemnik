@@ -1,7 +1,7 @@
 import { useMemo, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { Banknote, CheckCircle2, Landmark, Search } from 'lucide-react';
-import { AppShell, Chyba, Main, NapovedaCastky, Pole, Prepinac, Tlacitko, VSTUP, VolbaMesice, ZpusobIkona, useChrana, usePotvrzeni, useToast, zmeny } from '../components/ui';
+import { AppShell, Chyba, Main, NapovedaCastky, Pole, Prepinac, Tlacitko, VSTUP, VolbaMesice, ZpusobIkona, cekamPopis, useChrana, usePotvrzeni, useToast, zmeny } from '../components/ui';
 import { polePlatby, vysledekPoPlatbe } from '../components/formulare';
 import { useData } from '../data/store';
 import { aktualniNajem, mesicZData, navrhPlatby, parseCastka, stavNajemnika } from '../lib/core';
@@ -19,7 +19,7 @@ export default function VlozitPlatbu() {
   // Nikoho nepředvybírat – aby se platba omylem nezapsala jinému nájemníkovi.
   const [id, setId] = usePamet('vlozit:id', '');
   // Rychlá volba: kdo ještě nezaplatil tento měsíc nebo dluží (dlužníci první).
-  const cekam = aktivni.filter(x => x.dluh + x.tentoMesic > 0).sort((a, b) => b.dluh - a.dluh || a.najemnik.jmeno.localeCompare(b.najemnik.jmeno, 'cs'));
+  const cekam = aktivni.filter(x => x.dluh + x.tentoMesic + x.cekam > 0).sort((a, b) => b.dluh - a.dluh || a.najemnik.jmeno.localeCompare(b.najemnik.jmeno, 'cs'));
   const [hledat, setHledat] = useState('');
   const r = prehled.find(x => x.najemnik.id === id);
   // Za nejstarší nezaplacený / běžný (u „dopředu“ příští) měsíc; pravidelný nájem, nebo doplatek.
@@ -96,7 +96,7 @@ export default function VlozitPlatbu() {
                       className="card-soft-2 flex min-h-12 items-center gap-2 rounded-2xl px-3 py-2 text-left active:bg-muted">
                       <ZpusobIkona m={x.najemnik.zpusobPlaceni ?? 'ucet'} size="sm" />
                       <span><b className="block text-sm leading-tight">{x.najemnik.jmeno}</b>
-                        <span className={`text-[11px] font-semibold ${x.dluh ? 'text-status-debt' : 'text-status-due'}`}>{x.dluh ? `dluh ${kc(x.dluh)}` : `chybí ${kc(x.tentoMesic)}`}</span></span>
+                        <span className={`text-[11px] font-semibold ${x.dluh ? 'text-status-debt' : x.tentoMesic ? 'text-status-due' : 'text-muted-foreground'}`}>{x.dluh ? `dluh ${kc(x.dluh)}` : x.tentoMesic ? `chybí ${kc(x.tentoMesic)}` : cekamPopis(x)}</span></span>
                     </button>
                   ))}
                 </div>
@@ -109,7 +109,8 @@ export default function VlozitPlatbu() {
                   <p className="truncate font-bold">{r.najemnik.jmeno}</p>
                   <p className="truncate text-xs text-muted-foreground">{r.najemnik.oznaceni} · nájem {kc(aktualniNajem(r.najemnik, dnes))}
                     {r.dluh > 0 && <span className="font-bold text-status-debt"> · dluh {kc(r.dluh)}</span>}
-                    {r.tentoMesic > 0 && <span className="font-bold text-status-due"> · tento měsíc {kc(r.tentoMesic)}</span>}</p>
+                    {r.tentoMesic > 0 && <span className="font-bold text-status-due"> · tento měsíc {kc(r.tentoMesic)}</span>}
+                    {r.cekam > 0 && <span className="font-bold"> · {cekamPopis(r)}</span>}</p>
                 </div>
                 <button type="button" onClick={() => setId('')} className="shrink-0 rounded-xl bg-muted px-3 py-2 text-xs font-bold">Změnit</button>
               </div>

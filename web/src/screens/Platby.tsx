@@ -97,7 +97,10 @@ function ZaMesic({ mesic, podleId }: { mesic: string; podleId: Map<string, Najem
         <Nadpis>{minuly ? 'Dosud nezaplaceno' : 'Ještě nezaplatili'} · {nezaplatili.length}</Nadpis>
         <Card>{nezaplatili.map(({ r, m }) => (
           <RadekNajemnika key={r.najemnik.id} r={r} vpravo={
-            <p className="text-xs font-semibold text-status-due tabular">{m!.chybi < m!.mel ? `Zaplatil ${kc(m!.mel - m!.chybi)} z ${kc(m!.mel)}` : minuly ? 'Nezaplaceno' : 'Ještě nezaplatil'}</p>} />
+            <p className={`text-xs font-semibold tabular ${m!.stav === 'ceka' ? 'text-muted-foreground' : 'text-status-due'}`}>
+              {m!.chybi < m!.mel ? `Zaplatil ${kc(m!.mel - m!.chybi)} z ${kc(m!.mel)}` : minuly ? 'Nezaplaceno' : 'Ještě nezaplatil'}
+              {m!.stav === 'ceka' && r.cekamK && <span className="block font-medium">čekám k {datumKratce(r.cekamK)}</span>}
+            </p>} />
         ))}</Card>
       </>}
       {zaplatili.length > 0 && <>

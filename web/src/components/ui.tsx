@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { AlertTriangle, ArrowLeft, Banknote, CalendarDays, ChevronLeft, ChevronRight, Home, Landmark, ListChecks, Plus, Users, X, type LucideIcon } from 'lucide-react';
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { NazevMesice, kc, posunMesic } from '../lib/format';
+import { NazevMesice, datumKratce, kc, posunMesic } from '../lib/format';
 import type { Stav, Zpusob } from '../types';
 
 export function AppShell({ children, title, subtitle, active, right }: {
@@ -83,15 +83,20 @@ export function ZpusobIkona({ m, size = 'md' }: { m: Zpusob; size?: 'sm' | 'md' 
 export const STAV_CHIP: Record<Stav, string> = {
   dluh: 'bg-status-debt-soft text-status-debt',
   bezi: 'bg-status-due-soft text-status-due',
+  ceka: 'bg-muted text-muted-foreground',
   ok: 'bg-status-ok-soft text-status-ok',
   preplatek: 'bg-status-over-soft text-status-over',
 };
-export const STAV_TEXT: Record<Stav, string> = { dluh: 'text-status-debt', bezi: 'text-status-due', ok: 'text-status-ok', preplatek: 'text-status-over' };
-export const STAV_TECKA: Record<Stav, string> = { dluh: 'bg-status-debt', bezi: 'bg-status-due', ok: 'bg-status-ok', preplatek: 'bg-status-over' };
+export const STAV_TEXT: Record<Stav, string> = { dluh: 'text-status-debt', bezi: 'text-status-due', ceka: 'text-muted-foreground', ok: 'text-status-ok', preplatek: 'text-status-over' };
+export const STAV_TECKA: Record<Stav, string> = { dluh: 'bg-status-debt', bezi: 'bg-status-due', ceka: 'bg-muted-foreground', ok: 'bg-status-ok', preplatek: 'bg-status-over' };
 
-export function stavPopis(s: { stav: Stav; dluh: number; tentoMesic: number; preplatek: number }) {
+// Hotovost před dnem „čekám k“: „čekám 9 000 Kč k 15. 11.“
+export const cekamPopis = (s: { cekam: number; cekamK: string | null }) => `čekám ${kc(s.cekam)}${s.cekamK ? ` k ${datumKratce(s.cekamK)}` : ''}`;
+
+export function stavPopis(s: { stav: Stav; dluh: number; tentoMesic: number; cekam: number; cekamK: string | null; preplatek: number }) {
   if (s.stav === 'dluh') return `Dluží ${kc(s.dluh)}`;
   if (s.stav === 'bezi') return `Chybí ${kc(s.tentoMesic)}`;
+  if (s.stav === 'ceka') return 'Č' + cekamPopis(s).slice(1);
   if (s.stav === 'preplatek') return `Přeplatek ${kc(s.preplatek)}`;
   return 'Zaplaceno';
 }

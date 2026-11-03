@@ -65,6 +65,17 @@ export function nastavUpravu(najemnik, od, doMesice, castka, duvod = '') {
   return upravy.sort((a, b) => a.mesic.localeCompare(b.mesic));
 }
 
+// Hotovost s vyplněným „Hotovost čekám k (den)“: běžný měsíc do toho dne ještě nechybí, jen se čeká.
+// Vrací termín 'RRRR-MM-DD', pokud je dnes před ním; jinak null (převody a nájemníci bez dne: chybí od 1.).
+export function terminCekani(najemnik, dnes) {
+  if (najemnik.zpusobPlaceni !== 'hotove' || !Number.isInteger(najemnik.denHotovosti)) return null;
+  const mesic = mesicZData(dnes);
+  const [r, m] = mesic.split('-').map(Number);
+  const den = Math.min(Math.max(najemnik.denHotovosti, 1), new Date(Date.UTC(r, m, 0)).getUTCDate());
+  const termin = `${mesic}-${String(den).padStart(2, '0')}`;
+  return dnes < termin ? termin : null;
+}
+
 // vydaje = jednorázové výdaje / dluhy nájemníka { datum, castka, popis } – navyšují „měl zaplatit“ v měsíci data.
 // Platby se počítají do měsíce, za který jsou (obdobiPlatby). Co v měsíci přebývá, doplní nejdřív
 // nejstarší nezaplacené měsíce a zbytek je přeplatek. Platby za budoucí měsíce = předplaceno.
@@ -86,7 +97,7 @@ export function stavNajemnika(najemnik, platby, dnes, vydaje = []) {
     zaObdobi.set(m, (zaObdobi.get(m) ?? 0) + p.castka);
   }
   if (!mesice.length) {
-    return { mel: 0, zaplatil, dluh: 0, tentoMesic: 0, preplatek: zaplatil, stav: zaplatil > 0 ? 'preplatek' : 'ok', radky: [], budouci };
+    return { mel: 0, zaplatil, dluh: 0, tentoMesic: 0, cekam: 0, cekamK: null, preplatek: zaplatil, stav: zaplatil > 0 ? 'preplatek' : 'ok', radky: [], budouci };
   }
 
   // Výdaje do měsíce podle data (mimo rozsah ke krajnímu měsíci); výdaj s datem v budoucnu až v jeho měsíci,
@@ -120,22 +131,26 @@ export function stavNajemnika(najemnik, platby, dnes, vydaje = []) {
     pool -= doplnit;
   }
 
+  const termin = terminCekani(najemnik, dnes);
   let kumMel = 0, kumZaplatil = 0;
   const vysledek = radky.map(r => {
     kumMel += r.mel;
     kumZaplatil += r.zaplatil;
     const chybi = r.mel - r.pokryto;
-    const stav = chybi === 0 ? 'ok' : r.mesic === aktualni ? 'bezi' : 'dluh';
+    const stav = chybi === 0 ? 'ok' : r.mesic === aktualni ? (termin ? 'ceka' : 'bezi') : 'dluh';
     const { pokryto, ...zbytek } = r;
     return { ...zbytek, prubeznyRozdil: kumMel - kumZaplatil, chybi, stav };
   });
 
   const mel = kumMel;
   const dluh = vysledek.filter(r => r.mesic < aktualni).reduce((s, r) => s + r.chybi, 0);
-  const tentoMesic = vysledek.find(r => r.mesic === aktualni)?.chybi ?? 0;
+  // Běžný měsíc: „chybí“, nebo u hotovosti před dnem „čekám k“ jen „čekám“ (do toho dne nic nechybí).
+  const bezici = vysledek.find(r => r.mesic === aktualni)?.chybi ?? 0;
+  const tentoMesic = termin ? 0 : bezici;
+  const cekam = termin ? bezici : 0;
   const preplatek = pool + Object.values(budouci).reduce((s, x) => s + x, 0);
-  const stav = dluh > 0 ? 'dluh' : tentoMesic > 0 ? 'bezi' : preplatek > 0 ? 'preplatek' : 'ok';
-  return { mel, zaplatil, dluh, tentoMesic, preplatek, stav, radky: vysledek, budouci };
+  const stav = dluh > 0 ? 'dluh' : tentoMesic > 0 ? 'bezi' : cekam > 0 ? 'ceka' : preplatek > 0 ? 'preplatek' : 'ok';
+  return { mel, zaplatil, dluh, tentoMesic, cekam, cekamK: cekam ? termin : null, preplatek, stav, radky: vysledek, budouci };
 }
 
 // Návrh nové platby: za který měsíc a kolik.
@@ -177,7 +192,7 @@ export function navrhPlatby(najemnik, platby, dnes, vydaje = [], zaMesic = null)
 
 export const jeUkonceny = (najemnik, dnes) => !!najemnik.konec && najemnik.konec < mesicZData(dnes);
 
-const PORADI = { dluh: 0, bezi: 1, preplatek: 2, ok: 3 };
+const PORADI = { dluh: 0, bezi: 1, ceka: 2, preplatek: 3, ok: 4 };
 
 export function souhrn(najemnici, platby, dnes, vydaje = []) {
   const radky = najemnici.map(n => ({

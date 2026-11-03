@@ -2,12 +2,12 @@ import { useState } from 'react';
 import { Navigate, useParams } from 'react-router-dom';
 import { Bar, ComposedChart, ReferenceArea, ResponsiveContainer, Scatter, Tooltip, XAxis } from 'recharts';
 import { Mail, MessageSquare, Pencil, Phone, Plus, Receipt, RefreshCw } from 'lucide-react';
-import { AppShell, Card, Main, STAV_TEXT, ZpusobIkona } from '../components/ui';
+import { AppShell, Card, Main, STAV_TEXT, ZpusobIkona, cekamPopis } from '../components/ui';
 import { FormNajem, FormNajemnik, FormPlatba, FormVydaj, PanelMesice, PanelUkonceni } from '../components/formulare';
 import { PanelUpominky } from '../components/upominka';
 import { useData } from '../data/store';
 import { aktualniNajem, dalsiMesic, mesicZData, najemVMesici, obdobiPlatby, upravaVMesici, zpusobPlatby } from '../lib/core';
-import { NazevMesice, datumCz, kc, kratkyMesic, nazevMesice, odMesice } from '../lib/format';
+import { NazevMesice, datumCz, datumKratce, kc, kratkyMesic, nazevMesice, odMesice } from '../lib/format';
 import type { Najemnik, Platba } from '../types';
 import { usePamet } from '../lib/pamet';
 
@@ -95,6 +95,7 @@ export default function Detail() {
   const [hlavni, barva] = s.stav === 'dluh' ? [`Dluží ${kc(s.dluh)}`, STAV_TEXT.dluh]
     : s.stav === 'preplatek' ? [`Přeplatek ${kc(s.preplatek)}`, 'text-[oklch(0.8_0.1_250)]']
     : s.stav === 'bezi' ? [`Chybí ${kc(s.tentoMesic)}`, 'text-[oklch(0.82_0.14_65)]']
+    : s.stav === 'ceka' ? [`Čekám ${kc(s.cekam)}`, 'text-white/80']
     : ['Vše zaplaceno', 'text-[oklch(0.8_0.12_162)]'];
 
   return (
@@ -105,6 +106,7 @@ export default function Detail() {
           <p className="text-sm opacity-70">Stav</p>
           <p className={`text-[32px] leading-tight font-extrabold tabular ${s.stav === 'dluh' ? 'text-[oklch(0.75_0.16_25)]' : barva}`}>{hlavni}</p>
           {s.stav === 'dluh' && s.tentoMesic > 0 && <p className="text-sm opacity-80">+ tento měsíc chybí {kc(s.tentoMesic)}</p>}
+          {s.cekam > 0 && s.cekamK && <p className="text-sm opacity-80">{s.stav === 'dluh' ? `+ tento měsíc ${cekamPopis(s)}` : `hotově k ${datumKratce(s.cekamK)} – do té doby nic nechybí`}</p>}
           {tento && <p className="mt-2 text-sm opacity-80 tabular">{NazevMesice(mesic).split(' ')[0]}: zaplaceno {kc(zaplacenoTentoMesic)} z {kc(tento.mel)}</p>}
           <div className="mt-4 grid grid-cols-2 gap-3">
             <div className="rounded-2xl bg-white/5 p-3"><p className="text-xs opacity-60">Měl zaplatit</p><p className="text-lg font-bold tabular">{kc(s.mel)}</p></div>
@@ -197,7 +199,7 @@ export default function Detail() {
                   className={`grid w-full grid-cols-[1.3fr_1fr_1fr_1fr] items-center gap-2 border-l-4 px-4 py-2.5 text-left text-[13px] tabular active:bg-muted ${r.stav === 'dluh' ? 'border-l-status-debt' : r.stav === 'bezi' ? 'border-l-status-due' : 'border-l-status-ok'}`}>
                   <span>
                     <span className="block font-semibold">{NazevMesice(r.mesic).split(' ')[0]} {r.mesic.slice(2, 4)}</span>
-                    <span className={`block text-[11px] ${STAV_TEXT[r.stav]}`}>{r.chybi ? `chybí ${kc(r.chybi)}` : '✓'}{r.vydaj ? ` · výdaj ${kc(r.vydaj)}` : ''}</span>
+                    <span className={`block text-[11px] ${STAV_TEXT[r.stav]}`}>{r.chybi ? `${r.stav === 'ceka' ? 'čekám' : 'chybí'} ${kc(r.chybi)}` : '✓'}{r.vydaj ? ` · výdaj ${kc(r.vydaj)}` : ''}</span>
                   </span>
                   <span className="text-right">
                     <span className={`underline decoration-dotted underline-offset-4 ${r.uprava ? 'font-bold text-status-over' : ''}`}>{kc(r.mel)}</span>

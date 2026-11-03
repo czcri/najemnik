@@ -2,6 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { seznamMesice, odkazKalendare, icsHotovosti, prvniVyskyt } from '../core/hotovost.js';
+import { stavNajemnika } from '../core/logika.js';
 
 const najem = (id, castka, o = {}) => ({
   id, jmeno: id, oznaceni: 'Byt', zacatek: '2026-08', konec: null,
@@ -88,4 +89,37 @@ test('kalendář: dny 29–31', () => {
   assert.equal(prvniVyskyt(10, '2026-11-10'), '2026-11-10');
   assert.match(odkazKalendare({ ...N[3], denHotovosti: 31 }, 7000, '2026-11-30'), /BYMONTHDAY%3D-1/);
   assert.match(icsHotovosti([{ najemnik: { ...N[3], denHotovosti: 31 }, castka: 7000 }], '2026-11-10', 'x'), /DTSTART;VALUE=DATE:20261130\r\nRRULE:FREQ=MONTHLY;BYMONTHDAY=-1/);
+});
+
+// Detail / přehled: hotovost s dnem „čekám k“ – běžný měsíc do toho dne nechybí, jen se čeká (spec. kap. 22).
+const odListopadu = (id, castka, o = {}) => najem(id, castka, { zacatek: '2026-11', predpisy: [{ od: '2026-11', slozky: [{ nazev: 'Nájem', castka }] }], ...o });
+
+test('před dnem „čekám k“: čekám, ne chybí; od toho dne chybí', () => {
+  const n = odListopadu('Hana', 9000, { denHotovosti: 15 });
+  const pred = stavNajemnika(n, [], '2026-11-03');
+  assert.deepEqual([pred.stav, pred.tentoMesic, pred.cekam, pred.cekamK, pred.dluh], ['ceka', 0, 9000, '2026-11-15', 0]);
+  assert.equal(pred.radky.at(-1).stav, 'ceka');
+  const vDen = stavNajemnika(n, [], '2026-11-15');
+  assert.deepEqual([vDen.stav, vDen.tentoMesic, vDen.cekam, vDen.cekamK], ['bezi', 9000, 0, null]);
+});
+
+test('čekám: částečná platba sníží čekanou částku, zaplaceno = ok', () => {
+  const n = odListopadu('Hana', 9000, { denHotovosti: 15 });
+  assert.equal(stavNajemnika(n, [platba('Hana', '2026-11-02', 4000)], '2026-11-03').cekam, 5000);
+  assert.equal(stavNajemnika(n, [platba('Hana', '2026-11-02', 9000)], '2026-11-03').stav, 'ok');
+});
+
+test('čekám: starší dluh zůstává dluhem, převod a hotovost bez dne beze změny', () => {
+  const s = stavNajemnika(najem('Bára', 8000, { denHotovosti: 15 }), [], '2026-11-03');
+  assert.deepEqual([s.stav, s.dluh, s.tentoMesic, s.cekam], ['dluh', 24000, 0, 8000]);
+  const ucet = stavNajemnika(najem('Účetní', 12000, { zpusobPlaceni: 'ucet', denHotovosti: 20 }), [], '2026-11-03');
+  assert.deepEqual([ucet.tentoMesic, ucet.cekam], [12000, 0]);
+  const bezDne = stavNajemnika(najem('Cyril', 9000), [], '2026-11-03');
+  assert.deepEqual([bezDne.tentoMesic, bezDne.cekam], [9000, 0]);
+});
+
+test('čekám: den 31 v listopadu = 30.', () => {
+  const n = odListopadu('Dana', 7000, { denHotovosti: 31 });
+  assert.equal(stavNajemnika(n, [], '2026-11-29').cekamK, '2026-11-30');
+  assert.equal(stavNajemnika(n, [], '2026-11-30').stav, 'bezi');
 });

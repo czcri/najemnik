@@ -9,8 +9,10 @@ import type { Data, Najemnik, Nastaveni, Platba, Stav, Upominka, Vydaj } from '.
 
 export type StavNajemnika = {
   mel: number; zaplatil: number; dluh: number; tentoMesic: number; preplatek: number; stav: Stav;
+  // Hotovost před dnem „čekám k“: částka běžného měsíce se čeká (ještě nechybí), cekamK = termín 'RRRR-MM-DD'.
+  cekam: number; cekamK: string | null;
   budouci?: Record<string, number>;
-  radky: { mesic: string; mel: number; najem: number; vydaj: number; uprava: import('../types').UpravaNajmu | null; zaplatil: number; prubeznyRozdil: number; chybi: number; stav: 'ok' | 'bezi' | 'dluh' }[];
+  radky: { mesic: string; mel: number; najem: number; vydaj: number; uprava: import('../types').UpravaNajmu | null; zaplatil: number; prubeznyRozdil: number; chybi: number; stav: 'ok' | 'bezi' | 'ceka' | 'dluh' }[];
 };
 export type Prehled = StavNajemnika & { najemnik: Najemnik; ukonceny: boolean; najem: number };
 
@@ -92,7 +94,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         const n = data.najemnici.find(x => x.id === id);
         cache.set(id, n
           ? stavNajemnika(n, data.platby.filter(p => p.najemnikId === id), dnes, data.vydaje.filter(v => v.najemnikId === id))
-          : { mel: 0, zaplatil: 0, dluh: 0, tentoMesic: 0, preplatek: 0, stav: 'ok', radky: [] });
+          : { mel: 0, zaplatil: 0, dluh: 0, tentoMesic: 0, cekam: 0, cekamK: null, preplatek: 0, stav: 'ok', radky: [] });
       }
       return cache.get(id)!;
     };

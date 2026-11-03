@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Pencil, Phone, Send } from 'lucide-react';
-import { AppShell, Main, VolbaMesice, Zalozky, ZpusobIkona, usePotvrzeni } from '../components/ui';
+import { AppShell, Main, VolbaMesice, Zalozky, ZpusobIkona, cekamPopis, usePotvrzeni } from '../components/ui';
 import { PanelUpominky } from '../components/upominka';
 import { useData, type Prehled } from '../data/store';
 import { datumCz, kc, nazevMesice, pocet, posunMesic } from '../lib/format';
@@ -146,6 +146,7 @@ function KartaDluznika({ r, onZprava }: { r: Prehled; onZprava: () => void }) {
           <div className="text-right">
             <p className="text-lg font-extrabold text-status-debt tabular">{kc(r.dluh)}</p>
             {r.tentoMesic > 0 && <p className="text-[11px] text-status-due tabular">+ {kc(r.tentoMesic)} tento měsíc</p>}
+            {r.cekam > 0 && <p className="text-[11px] text-muted-foreground tabular">+ tento měsíc {cekamPopis(r)}</p>}
           </div>
         </Link>
         <p className="mt-3 text-xs text-muted-foreground">Poslední platba: {posledni ? `${kc(posledni.castka)}, ${datumCz(posledni.datum)}` : '—'}</p>

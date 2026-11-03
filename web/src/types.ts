@@ -77,4 +77,4 @@ export type Data = {
   nastaveni: Nastaveni;
 };
 
-export type Stav = 'dluh' | 'bezi' | 'ok' | 'preplatek';
+export type Stav = 'dluh' | 'bezi' | 'ceka' | 'ok' | 'preplatek';

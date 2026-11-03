@@ -262,7 +262,7 @@ try {
   await snimek('prehled');
   await klik('O aplikaci');
   t = await text();
-  over(t.includes('verze 2.12') && t.toLowerCase().includes('vytvořilo'), 'panel O aplikaci z loga v záhlaví');
+  over(t.includes('verze 2.13') && t.toLowerCase().includes('vytvořilo'), 'panel O aplikaci z loga v záhlaví');
   await snimek('o-aplikaci', false);
   await klik('Zavřít');
   await jdi('#/dluznici');
@@ -388,6 +388,24 @@ try {
   over(t.includes('Připomínky hotovosti v kalendáři') && t.includes('každý měsíc'), 'nastavení: připomínky v kalendáři');
   const odkaz = await js(`[...document.querySelectorAll('a')].find(a => a.href.includes('calendar.google.com'))?.href ?? ''`);
   over(odkaz.includes('BYMONTHDAY%3D15'), 'odkaz do Google Kalendáře s opakováním 15.', odkaz);
+
+  // 6c) Hotovost před dnem „čekám k“: běžný měsíc ještě nechybí, jen se čeká (dnes 15. 10., den 25.)
+  await jdi(`#/najemnici/${hanaId}`);
+  await klik('Upravit');
+  await vypln({ 'Hotovost čekám k (den v měsíci)': '25' });
+  await klik('Uložit');
+  await potvrdit();
+  t = await text();
+  over(t.includes('Čekám ' + kc(5000)) && t.includes('hotově k 25. 10.') && !t.includes('Chybí ' + kc(5000)),
+    'hotovost před dnem „čekám k“: detail ukáže Čekám, ne Chybí', t.slice(0, 500));
+  await snimek('detail-cekam');
+  await klik('Měsíce');
+  t = await text();
+  over(t.includes('čekám ' + kc(5000)) && !t.includes('chybí ' + kc(5000)), 'tabulka Měsíce: běžný měsíc „čekám“', t.slice(0, 900));
+  await jdi('#/najemnici');
+  await klik('Čekám hotovost');
+  t = await text();
+  over(t.includes('Hana Hotová') && t.includes('Čekám ' + kc(5000) + ' k 25. 10.') && !t.includes('Jan Testovací'), 'seznam nájemníků: filtr Čekám hotovost', t.slice(0, 500));
 
   // 7) Import výpisu Fio (vymyšlená data)
   const csv = '\ufeff"Datum";"Objem";"Měna";"Protiúčet";"Kód banky";"Zpráva pro příjemce";"Poznámka";"Typ";"Název banky";"Název protiúčtu";"Reference plátce";"KS";"VS";"SS";"VS"\r\n'

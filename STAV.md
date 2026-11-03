@@ -119,3 +119,15 @@ Hotovo:
 
 Další krok:
 - Sloučit větev `worktree-potvrzovani-zmen` do `main` (push do main = zveřejnění na Pages) a vyzkoušet v telefonu.
+
+## 2026-11-03 – verze 2.13: hotovost „čekám k (den)“ – do toho dne nic nechybí
+
+Hotovo:
+- Hotovostní nájemník s vyplněným „Hotovost čekám k (den v měsíci)“: běžný měsíc do toho dne není „Chybí“, ale nový stav **„Čekám X Kč k 15. 11.“** (neutrální barva). Ve stanovený den se změní na oranžové „Chybí“; dluh po splatnosti (červeně) až od dalšího měsíce – beze změny.
+- Výpočet: `core/logika.js` – `terminCekani()`, `stavNajemnika` vrací `cekam`, `cekamK`, stav `ceka` (tentoMesic je do termínu 0, takže součty „chybí tento měsíc“ hotovost před termínem nepočítají). Den 31 = poslední den měsíce.
+- Zobrazení: detail (hlavička + tabulka Měsíce), seznam nájemníků (filtr „Čekám hotovost“), Dlužníci, Platby („čekám k …“), Vložit platbu (rychlá volba i karta), výsledek po zapsání platby.
+- Převody beze změny (řeší se výpisem na konci měsíce); nájemníci bez dne beze změny (chybí od 1.).
+- Testy: 73 core (+4) + kouřový test (+3 kontroly).
+
+Další krok:
+- Zveřejnit (push do main) po schválení uživatelem a vyzkoušet v telefonu.
