@@ -131,3 +131,8 @@ Hotovo:
 
 Další krok:
 - Zveřejnit (push do main) po schválení uživatelem a vyzkoušet v telefonu.
+
+## 2026-11-06 – návrh: automatické načtení plateb z Fio (jen návrh)
+
+- Zapsáno v `docs/navrh-fio-api.md`: oficiální Fio API s tokenem „Sledování účtu“ (jen čtení, 2FA jen při založení, platnost 180 dní s prodlužováním při přihlášení). Z prohlížeče nejde volat přímo (CORS 403), proto doporučena varianta A = malý Cloudflare Worker jako prostředník + „Načíst z Fio“ v Importu (náhled → potvrzení).
+- Otevřené otázky: varianta A/B/C, počet účtů Fio, automaticky × tlačítkem. Nic neimplementováno.
