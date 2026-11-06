@@ -149,3 +149,9 @@ Hotovo:
 - Token Fio, `npx wrangler@4 login`, `npm run banka:priprav`, `npm run banka:token`, odkaz do telefonu (docs/banka-napojeni.md).
 
 Další krok: fáze 2 – KB (ADAA).
+
+## 2026-11-06 – fáze 2 (KB): zastaveno na předpokladech u uživatele
+
+- KB ADAA vyžaduje: registraci firmy jako partnera na API portálu KB (API klíč, aplikace) a **kvalifikovaný certifikát na firmu** (I.CA / PostSignum, pečeť) pro získání software statementu přes mTLS. Bez toho nejde KB napojit ani vyzkoušet. Postup krok za krokem: docs/navrh-fio-api.md → „KB – zjištěno 2026-11-06“.
+- Architektura je připravená: KB bude další zdroj ve službě `najemnik-banka` (vedle Fio), aplikace se nemění.
+- Do té doby KB zůstává na importu výpisu (KB PDF).

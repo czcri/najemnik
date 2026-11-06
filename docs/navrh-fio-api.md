@@ -74,6 +74,28 @@ KB nemá jednoduchý osobní token jako Fio. Možnosti:
 
 Doporučení pro KB: nejdřív zjistit, zda jde o účet podnikatele (FOP / s.r.o.), nebo soukromý. Soukromý účet → zůstat u importu výpisu. Podnikatelský účet → ověřit registraci aplikace u KB a teprve pak rozhodnout.
 
+### KB – zjištěno 2026-11-06 (účet je podnikatelský)
+Postup podle KB „Technical Manual – Registration and Security, API Business Suite“ a „Account Direct Access“:
+1. **Registrace na produkčním API portálu KB** (api.kb.cz) jako partner, souhlas s Kodexem obezřetného
+   chování, založení aplikace, **API klíč**, přihlášení aplikace k API: Account Direct Access, OAUTH2,
+   Client registration.
+2. **Software statement** (podepsané prohlášení o aplikaci, platí 12 měsíců): `POST
+   https://api.kb.cz/open/api/client-registration/v1/software-statements` přes **mTLS s kvalifikovaným
+   certifikátem** od certifikační autority. Podle KB a integračních návodů jen **I.CA nebo PostSignum**,
+   certifikát **na firmu** (elektronická pečeť QSealC nebo QWAC). Vydává se po ověření totožnosti.
+   Orientačně PostSignum pečeť asi 420 Kč bez DPH/rok (nedatovaný zdroj, ověřit).
+3. **Registrace aplikace klientem** (jednou, KB Klíčem): prohlížeč →
+   `https://api.kb.cz/client-registration/saml/register?registrationRequest=…` → návrat na
+   registrationBackUri se zašifrovanými client_id / client_secret (AES-256, encryptionKey volí aplikace).
+4. **Souhlas se stahováním** (KB Klíčem): `https://login.kb.cz/autfe/ssologin?scope=adaa…` → kód (platí
+   2 min) → `POST https://api.kb.cz/open/api/oauth2/v1/access_token` → access + **refresh token (12 měsíců)**.
+5. Denně: obnovit access token, `GET https://api.kb.cz/open/api/adaa/v1/accounts` (accountId místo
+   IBAN) a historie transakcí. Cena v MojeBanka zdarma do 50 stažení/měsíc.
+
+Pro Nájemník: kroky 3–5 zvládne služba `najemnik-banka` (redirect na adresu služby, tokeny v KV).
+Krok 2 stačí jednou za 12 měsíců skriptem v PC s certifikátem. **Blokuje to krok 1 a certifikát,**
+obojí musí zařídit majitel firmy. Do té doby zůstává KB na importu výpisu (KB PDF).
+
 ## Otevřené otázky
 1. Varianta A, B, nebo C?
 2. Kolik účtů u Fio se má napojit (každý účet = vlastní token)?
