@@ -62,6 +62,18 @@ nájemníkům stejným párováním jako dnešní import výpisu (účet plátce
 | Kouřový test (Worker podvržený), STAV.md, zveřejnění | 20 min |
 | **Celkem** | **asi 2 h** |
 
+## Komerční banka (doplněno 2026-11-06)
+KB nemá jednoduchý osobní token jako Fio. Možnosti:
+- **KB „Přímý přístup k účtu“ (ADAA)**: online stahování pohybů do aplikace třetí strany.
+  - Jen pro účty **podnikatele (FOP) nebo firmy (PO)**, majitel musí mít MojeBanka / MojeBanka Business / Profibanka.
+  - Aktivace probíhá v aplikaci třetí strany, potvrzuje se KB Klíčem, přístup se obnovuje každých 12 měsíců.
+  - Cena od 1. 11. 2025: v MojeBanka **zdarma do 50 stažení/měsíc**, jinak 100 Kč/měsíc (1× za 61 min) nebo 500 Kč/měsíc (1× za 10 min). V KB+ není volba zdarma.
+  - Nájemník by musel být zaregistrovaný jako aplikace u KB (developers.kb.cz). **Neověřeno**, zda to jde bez licence a jak náročné je napojení (pravděpodobně OAuth + certifikát). Odhad 3–4 h + nejistota.
+- **Agregátor (licencovaný AIS, např. GoCardless Bank Account Data / Nordigen, Salt Edge, Finbricks)**: KB podporuje, ale GoCardless podle zpráv z 2026 nepřijímá nové registrace a ostatní jsou placené. Data navíc procházejí třetí stranou.
+- **Dnešní import výpisu (KB PDF už aplikace umí)**: zůstává nejjednodušší. Lze zkrátit interval výpisů v MojeBanka (např. týdně nebo denně) a importovat častěji.
+
+Doporučení pro KB: nejdřív zjistit, zda jde o účet podnikatele (FOP / s.r.o.), nebo soukromý. Soukromý účet → zůstat u importu výpisu. Podnikatelský účet → ověřit registraci aplikace u KB a teprve pak rozhodnout.
+
 ## Otevřené otázky
 1. Varianta A, B, nebo C?
 2. Kolik účtů u Fio se má napojit (každý účet = vlastní token)?
