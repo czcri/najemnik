@@ -1,0 +1,22 @@
+# Služba „najemnik-banka“: denně stáhne příchozí platby z banky do fronty pro aplikaci Nájemník.
+# Nastavení krok za krokem: docs/banka-napojeni.md
+name = "najemnik-banka"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+
+# Každý den v 6:00 UTC (7:00 v zimě, 8:00 v létě).
+[triggers]
+crons = ["0 6 * * *"]
+
+# Fronta pohybů, odběry upozornění a klíče pro upozornění. ID doplní `npm run banka:priprav`.
+[[kv_namespaces]]
+binding = "DATA"
+id = "DOPLNIT"
+
+[vars]
+# Adresy, ze kterých smí aplikace službu volat.
+POVOLENE_PUVODY = "https://czcri.github.io"
+
+# Tajné údaje (wrangler secret put …), nikdy do repozitáře:
+#   KLIC_APLIKACE  – klíč, kterým se aplikace prokazuje (vytvoří `npm run banka:priprav`)
+#   FIO_TOKEN_1, FIO_TOKEN_2, …  – tokeny Fio „Sledování účtu“, jeden na každý účet

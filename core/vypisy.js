@@ -105,6 +105,31 @@ export function nactiFioCsv(text, nazevSouboru = '') {
   return { banka: 'fio', ucet: m ? normalizujUcet(m[1], '2010') : '', pohyby };
 }
 
+// ---------- Fio – JSON z API (fioapi.fio.cz …/transactions.json) ----------
+// Stejná pole jako CSV; ID pohybu stejné jako v CSV → opakovaný import se pozná jako duplicita.
+// Datum je ve starších odpovědích číslo (ms), v novějších text „RRRR-MM-DD+0100“.
+export function nactiFioJson(data) {
+  const vypis = data?.accountStatement;
+  if (!vypis?.info) throw new Error('Odpověď není výpis z Fio API.');
+  const h = (t, c) => t[`column${c}`]?.value ?? '';
+  const datum = v => (typeof v === 'number'
+    ? new Date(v).toLocaleDateString('sv-SE', { timeZone: 'Europe/Prague' })
+    : String(v).slice(0, 10));
+  const pohyby = (vypis.transactionList?.transaction ?? []).map(t => ({
+    datum: datum(h(t, 0)),
+    castkaHal: Math.round(Number(h(t, 1)) * 100),
+    protiucet: normalizujUcet(h(t, 2), h(t, 3)),
+    nazevProtiuctu: String(h(t, 10)).trim(),
+    vs: normalizujSymbol(h(t, 5)),
+    ks: normalizujSymbol(h(t, 4)),
+    ss: normalizujSymbol(h(t, 6)),
+    zprava: String(h(t, 16) || h(t, 7) || h(t, 25)).trim(),
+    typ: String(h(t, 8)).trim(),
+    idBanky: String(h(t, 22)),
+  }));
+  return { banka: 'fio', ucet: normalizujUcet(vypis.info.accountId, vypis.info.bankId), pohyby };
+}
+
 // ---------- Česká spořitelna – CSV z Georga ----------
 export function jeCsCsv(radky) {
   const h = radky[0] ?? [];
