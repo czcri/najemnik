@@ -13,8 +13,32 @@ const SNIMKY = process.argv[2] ?? path.join(tmpdir(), 'najemnik-smoke-v2');
 const CHROME = process.env.CHROME ?? 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 const TYPY = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.webmanifest': 'application/manifest+json', '.svg': 'image/svg+xml' };
 
+// Podvržená služba najemnik-banka (vymyšlená data): fronta 2 pohybů, odškrtnuté klíče se zaznamenají.
+const banka = {
+  fronta: [
+    { datum: '2026-10-14', castkaHal: 750000, protiucet: '1234567890/3030', nazevProtiuctu: 'Jan Testovací', vs: '1001', ks: '', ss: '', zprava: 'najem rijen', typ: 'Příjem', idBanky: 'B1' },
+    { datum: '2026-10-14', castkaHal: 120000, protiucet: '7777777777/0800', nazevProtiuctu: 'Neznámý Plátce', vs: '', ks: '', ss: '', zprava: '', typ: 'Příjem', idBanky: 'B2' },
+  ],
+  hotovo: [],
+};
+async function sluzbaBanky(req, res, cesta) {
+  const odpovez = (data, status = 200) => res.writeHead(status, { 'content-type': 'application/json' }).end(JSON.stringify(data));
+  if (req.headers['x-klic'] !== 'test-klic') return odpovez({ chyba: 'Neplatný klíč aplikace.' }, 401);
+  const zbyva = () => banka.fronta.filter(p => !banka.hotovo.includes(`2200000001/2010|id|${p.idBanky}`));
+  if (cesta.endsWith('/stav')) return odpovez({ ucty: [{ banka: 'fio', ucet: '2200000001/2010', posledni: '2026-10-15T06:00:00Z', chyba: null }], fronta: zbyva().length, vapid: 'x' });
+  if (cesta.endsWith('/pohyby') || cesta.endsWith('/nacist')) return odpovez({ vypisy: [{ banka: 'fio', ucet: '2200000001/2010', pohyby: zbyva() }] });
+  if (cesta.endsWith('/hotovo')) {
+    let telo = '';
+    for await (const c of req) telo += c;
+    banka.hotovo.push(...JSON.parse(telo).klice);
+    return odpovez({ fronta: zbyva().length });
+  }
+  return odpovez({ chyba: 'Neznámá adresa.' }, 404);
+}
+
 const server = createServer(async (req, res) => {
   const cesta = decodeURIComponent(new URL(req.url, 'http://x').pathname);
+  if (cesta.startsWith('/banka-test/')) return sluzbaBanky(req, res, cesta);
   if (cesta === '/prazdna.html') return res.writeHead(200, { 'content-type': 'text/html' }).end('<!doctype html><title>x</title>');
   const soubor = path.join(KOREN, cesta.endsWith('/') ? cesta + 'index.html' : cesta);
   try {
@@ -262,7 +286,7 @@ try {
   await snimek('prehled');
   await klik('O aplikaci');
   t = await text();
-  over(t.includes('verze 2.13') && t.toLowerCase().includes('vytvořilo'), 'panel O aplikaci z loga v záhlaví');
+  over(t.includes('verze 2.14') && t.toLowerCase().includes('vytvořilo'), 'panel O aplikaci z loga v záhlaví');
   await snimek('o-aplikaci', false);
   await klik('Zavřít');
   await jdi('#/dluznici');
@@ -439,6 +463,31 @@ try {
   await klik('Spárovat platby');
   t = await text();
   over(t.includes('0 přiřazeno') && t.includes('Zapsat 0 plateb'), 'opakovaný import nezapíše platbu znovu', t.slice(0, 400));
+
+  // 7b) Platby z banky (podvržená služba): napojení odkazem → pruh na přehledu → náhled → zápis → odškrtnutí
+  await jdi(`#/nastaveni?banka=${encodeURIComponent(URL_APP + 'banka-test')}&klic=test-klic`);
+  await pockej(300);
+  over((await text()).includes('Napojit platby z banky?'), 'banka: napojení odkazem s potvrzením');
+  await potvrdit();
+  await pockej(400);
+  t = await text();
+  over(t.includes('Napojeno') && t.includes('Naposledy načteno') && !(await js('location.hash')).includes('klic='), 'banka: napojeno, stav účtu, klíč zmizel z adresy', t.slice(0, 300));
+  await jdi('#/');
+  await pockej(500);
+  t = await text();
+  over(t.includes('Z banky přišly 2 platby'), 'banka: pruh na přehledu „Z banky přišly 2 platby“', t.slice(0, 300));
+  await js(`[...document.querySelectorAll('a')].find(a => a.innerText.startsWith('Z banky přišly')).click()`);
+  await pockej(600);
+  t = await text();
+  over(t.includes('1 přiřazeno') && t.includes('1 nepřiřazeno') && t.includes('Neznámý Plátce'), 'banka: náhled párování (1 přiřazeno, 1 nepřiřazeno)', t.slice(0, 500));
+  await snimek('banka-nahled');
+  await klik('Zapsat 1 platbu');
+  over((await text()).includes('Zapsat platby z banky?'), 'banka: potvrzení zápisu');
+  await potvrdit();
+  await pockej(300);
+  over(banka.hotovo.length === 1 && banka.hotovo[0] === '2200000001/2010|id|B1', 'banka: služba odškrtla jen zapsanou platbu, nepřiřazená zůstala', JSON.stringify(banka.hotovo));
+  await jdi(`#/najemnici/${nid}`);
+  over((await text()).includes('Z banky · Fio'), 'banka: platba v detailu se štítkem „Z banky · Fio“');
 
   // Ukončit nájem jako samostatná akce v detailu
   await jdi(`#/najemnici/${nid}`);

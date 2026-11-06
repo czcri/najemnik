@@ -18,7 +18,7 @@ const BANKY: Record<string, string> = { fio: 'Fio', cs: 'ČS', kb: 'KB' };
 const KANAL: Record<string, string> = { sms: 'SMS', whatsapp: 'WhatsApp', email: 'e-mail' };
 export function ZdrojStitek({ p }: { p: Platba }) {
   const z = p.zdroj;
-  const [text, styl] = z?.typ === 'vypis' ? [`Výpis · ${BANKY[z.banka] ?? z.banka}`, 'bg-status-over-soft text-status-over']
+  const [text, styl] = z?.typ === 'vypis' ? [`${z.auto ? 'Z banky' : 'Výpis'} · ${BANKY[z.banka] ?? z.banka}`, 'bg-status-over-soft text-status-over']
     : z?.typ === 'hotove' ? ['Hotově', 'bg-status-ok-soft text-cash']
     : z?.typ === 'prevod' ? ['Převod – ručně', 'bg-muted text-muted-foreground']
     : ['Ručně', 'bg-muted text-muted-foreground'];

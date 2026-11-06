@@ -4,6 +4,7 @@ import { PanelOAplikaci } from './Nastaveni';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { FormNajemnik } from '../components/formulare';
 import { HlavniKarta, useHotovostDnes, type HlavniKartaRef } from '../components/HlavniKarta';
+import { BankaBanner } from '../components/BankaBanner';
 import { AlertTriangle, BarChart3, Banknote, Building2, ChevronRight, Download, FileUp, Plus, Settings, Users, Wallet, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { AppShell, Main } from '../components/ui';
@@ -64,7 +65,7 @@ export default function Prehled() {
       sub: <>{NazevMesice(mesic).split(' ')[0]}: přišlo {kc(tento.prijato)}</>,
       extra: <Sparkline hodnoty={st.mesice.map(m => m.prijato)} />,
     },
-    { to: '/import', label: 'Import z banky', sub: 'Nahrát výpisy', icon: FileUp, tone: 'bg-muted text-muted-foreground' },
+    { to: data.nastaveni.banka ? '/import?banka=1' : '/import', label: 'Import z banky', sub: data.nastaveni.banka ? 'Platby z banky' : 'Nahrát výpisy', icon: FileUp, tone: 'bg-muted text-muted-foreground' },
   ];
 
   return (
@@ -93,6 +94,7 @@ export default function Prehled() {
             <ChevronRight className="size-4 text-muted-foreground" />
           </Link>
         )}
+        <BankaBanner />
         {data.najemnici.length === 0 && (
           <section className="card-soft-2 mb-4 p-6 text-center">
             <p className="text-lg font-extrabold">Vítejte v aplikaci Nájemník</p>

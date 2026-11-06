@@ -207,6 +207,7 @@ export function prevedImport(vypis, vysledky, rozhodnuti, najemnici, pravidla, n
         zdroj: {
           typ: 'vypis', klic: v.klic, banka: vypis.banka, ucet: vypis.ucet, castkaHal: pohyb.castkaHal,
           protiucet: pohyb.protiucet, nazevProtiuctu: pohyb.nazevProtiuctu, vs: pohyb.vs,
+          ...(vypis.auto ? { auto: true } : {}), // načteno automaticky z banky
         },
       });
       if (r.zapamatovatUcet && pohyb.protiucet && !(n.uctyPlatce ?? []).includes(pohyb.protiucet)) {

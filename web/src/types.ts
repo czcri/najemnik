@@ -39,6 +39,7 @@ export type ZdrojPlatby =
       protiucet?: string;
       nazevProtiuctu?: string;
       vs?: string;
+      auto?: boolean; // načteno automaticky z banky (služba najemnik-banka), ne z nahraného výpisu
     };
 
 export type Platba = {
@@ -67,6 +68,8 @@ export type Nastaveni = {
   pravidla: PravidlaImportu;
   importy: ZaznamImportu[];
   posledniZaloha: string | null;
+  // Automatické načítání plateb z banky (služba najemnik-banka, spec. kap. 23); do zálohy se neukládá.
+  banka?: { url: string; klic: string; upozorneni?: boolean };
 };
 
 export type Data = {

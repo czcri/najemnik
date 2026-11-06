@@ -5,7 +5,9 @@ import { vychoziNastaveni } from '../data/vychozi';
 import type { Data } from '../types';
 
 function soubor(data: Data) {
-  const text = JSON.stringify(vytvorZalohu(data, new Date().toISOString()), null, 1);
+  // Napojení na banku (klíč aplikace) do zálohy nepatří – soubor se posílá e-mailem / na Disk.
+  const { banka: _banka, ...nastaveni } = data.nastaveni;
+  const text = JSON.stringify(vytvorZalohu({ ...data, nastaveni }, new Date().toISOString()), null, 1);
   return new File([text], `najemnik-zaloha-${dnes()}.json`, { type: 'application/json' });
 }
 

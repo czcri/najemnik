@@ -23,7 +23,8 @@ export function Zaloha() {
         text: `Současná data se NAHRADÍ. Před obnovou se jejich záloha automaticky uloží do Stažených souborů.${varovani.length ? `\n\nPozor: ${varovani.join(' ')}` : ''}`,
       })) return;
       if (data.najemnici.length || data.platby.length) stahniZalohu(data);
-      await akce.nahradVse(z);
+      // Napojení na banku v záloze není – ponechat současné.
+      await akce.nahradVse({ ...z, nastaveni: { ...z.nastaveni, banka: data.nastaveni.banka } });
       toast('Data obnovena ze zálohy');
     } catch (e) {
       alert(e instanceof Error ? e.message : String(e));

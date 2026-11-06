@@ -38,7 +38,8 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   const r = e.request;
-  if (r.method !== 'GET' || !r.url.startsWith('http')) return;
+  // Jen soubory aplikace; dotazy na službu banky (jiná adresa) jdou vždy rovnou do sítě.
+  if (r.method !== 'GET' || !r.url.startsWith('http') || new URL(r.url).origin !== self.location.origin) return;
   e.respondWith((async () => {
     const cache = await caches.open(MEZIPAMET);
     if (r.mode === 'navigate') {
@@ -57,5 +58,24 @@ self.addEventListener('fetch', e => {
     const odpoved = await fetch(r);
     if (odpoved.ok || odpoved.type === 'opaque') cache.put(r, odpoved.clone());
     return odpoved;
+  })());
+});
+
+// Upozornění ze služby najemnik-banka (bez obsahu – jen „přišly platby“). Klepnutí otevře kontrolu plateb.
+self.addEventListener('push', e => {
+  e.waitUntil(self.registration.showNotification('Nájemník', {
+    body: 'Z banky přišly nové platby – klepněte a zkontrolujte je.',
+    icon: 'ikony/ikona-192.png', badge: 'ikony/ikona-192.png', tag: 'banka', data: { cil: './#/import?banka=1' },
+  }));
+});
+
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  e.waitUntil((async () => {
+    const cil = new URL(e.notification.data?.cil ?? './', self.registration.scope).href;
+    const okna = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    const okno = okna.find(o => o.url.startsWith(self.registration.scope));
+    if (okno) { await okno.focus(); return okno.navigate(cil); }
+    return self.clients.openWindow(cil);
   })());
 });

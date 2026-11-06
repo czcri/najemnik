@@ -13,3 +13,8 @@ dist/
 
 # zdrojové soubory loga (do aplikace jdou jen odvozené SVG ve web/public/logo)
 /logo/
+
+# služba najemnik-banka: odkaz s klíčem aplikace a pracovní soubory wrangleru – NIKDY do repa
+banka/.local/
+.wrangler/
+banka/.wrangler/

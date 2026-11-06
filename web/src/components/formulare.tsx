@@ -26,7 +26,7 @@ export const polePlatby = (n: Najemnik) => [
   { l: 'Částka', v: (p: Platba) => kc(p.castka) },
   { l: 'Za měsíc', v: (p: Platba) => nazevMesice(obdobiPlatby(p, n)) },
   { l: 'Datum', v: (p: Platba) => datumCz(p.datum) },
-  { l: 'Způsob', v: (p: Platba) => (p.zdroj?.typ === 'hotove' ? 'hotově' : p.zdroj?.typ === 'vypis' ? 'z výpisu' : 'převodem') },
+  { l: 'Způsob', v: (p: Platba) => (p.zdroj?.typ === 'hotove' ? 'hotově' : p.zdroj?.typ === 'vypis' ? (p.zdroj.auto ? 'z banky' : 'z výpisu') : 'převodem') },
   { l: 'Poznámka', v: (p: Platba) => p.poznamka ?? '' },
 ];
 const POLE_VYDAJE = [

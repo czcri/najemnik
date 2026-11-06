@@ -1,5 +1,8 @@
-import { useState, type ReactNode } from 'react';
-import { CheckCircle2, FileText, FileUp } from 'lucide-react';
+import { useEffect, useState, type ReactNode } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { CheckCircle2, FileText, FileUp, Landmark } from 'lucide-react';
+import { zapomenStavBanky } from '../components/BankaBanner';
+import { odskrtni, pohybyZBanky } from '../lib/banka';
 import { AppShell, Card, Chyba, Main, Nadpis, Tlacitko, useChrana, usePotvrzeni, useToast } from '../components/ui';
 import { useData } from '../data/store';
 import {
@@ -46,6 +49,37 @@ export default function Import() {
   const [rozhodnuti, setRozhodnuti] = useState<Record<string, Rozhodnuti>>({});
   const [hotovo, setHotovo] = useState<number | null>(null);
   const najemnici = data.najemnici;
+  // Automaticky z banky (spec. kap. 23): fronta ze služby najemnik-banka → stejný náhled jako výpis.
+  const banka = data.nastaveni.banka;
+  const [parametry, setParametry] = useSearchParams();
+  const [zBanky, setZBanky] = useState(false);
+  const [nactiBanku, setNactiBanku] = useState(false);
+  const [chybaBanky, setChybaBanky] = useState<string | null>(null);
+
+  async function zkontrolujBanku(ted = false) {
+    if (!banka) return;
+    setNactiBanku(true);
+    setChybaBanky(null);
+    setHotovo(null);
+    try {
+      const vypisy = (await pohybyZBanky(banka, ted)).filter(v => v.pohyby.length);
+      if (!vypisy.length) { toast(ted ? 'Z banky nepřišlo nic nového' : 'Žádné nové platby z banky'); return; }
+      setSoubory([]);
+      setZBanky(true);
+      sparujVse(vypisy.map(v => ({ nazev: `Z banky · ${BANKY[v.banka]} ${v.ucet}`, vypis: v })));
+    } catch (e) {
+      setChybaBanky(e instanceof Error ? e.message : String(e));
+    } finally {
+      setNactiBanku(false);
+    }
+  }
+  // Odkaz z upozornění / z přehledu: #/import?banka=1 → rovnou zkontrolovat.
+  useEffect(() => {
+    if (parametry.get('banka') !== '1') return;
+    setParametry({}, { replace: true });
+    zkontrolujBanku();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function vyber(files: FileList | null) {
     if (!files?.length) return;
@@ -60,9 +94,9 @@ export default function Import() {
     setSoubory(soubory.map((s, n) => (n === i && s.vypis ? { ...s, vypis: { ...s.vypis, ucet } } : s)));
   }
 
-  function sparujVse() {
+  function sparujVse(zdroje: Soubor[] = soubory) {
     const videne = new Set<string>();
-    const vys = soubory.filter(s => s.vypis?.ucet).map(s => {
+    const vys = zdroje.filter(s => s.vypis?.ucet).map(s => {
       const v = sparuj(s.vypis!, najemnici, data.platby, data.nastaveni.pravidla).map(x => {
         // Překrývající se výpisy v jednom importu: stejný pohyb jen jednou.
         if (videne.has(x.klic) && x.stav !== 'duplicita') return { ...x, stav: 'duplicita' as const, duvod: 'Je i v jiném vybraném výpisu.' };
@@ -103,7 +137,7 @@ export default function Import() {
       ...(noveUcty > 0 ? [{ l: 'Do Moje účty přibude', po: pocet(noveUcty, 'účet', 'účty', 'účtů') }] : []),
       ...(novaPravidla > 0 ? [{ l: 'Nová pravidla „není nájem“', po: String(novaPravidla) }] : []),
     ];
-    if (!await potvrd({ nadpis: 'Zapsat import z výpisu?', radky, tlacitko: 'Zapsat' })) return;
+    if (!await potvrd({ nadpis: zBanky ? 'Zapsat platby z banky?' : 'Zapsat import z výpisu?', radky, tlacitko: 'Zapsat' })) return;
     await akce.davka({
       uloz: { platby, najemnici: [...zmeneni.values()] },
       smaz: { platby: smazat },
@@ -112,10 +146,18 @@ export default function Import() {
         importy: [...vysledky.map(x => ({ soubor: x.nazev, datum: dnes, pocet: platby.filter(p => p.zdroj?.typ === 'vypis' && p.zdroj.ucet === x.vypis.ucet).length })), ...data.nastaveni.importy].slice(0, 20),
       },
     });
+    // Z banky: zpracované pohyby (zapsané, „není nájem“, už zapsané dřív) služba odškrtne; přeskočené zůstanou.
+    if (zBanky && banka) {
+      const klice = vysledky.flatMap(x => x.v).filter(x => ['duplicita', 'nenajem'].includes(x.stav)
+        || ['zapsat', 'nahradit', 'nenajem', 'nenajemVzdy'].includes(rozhodnuti[x.klic]?.akce ?? '')).map(x => x.klic);
+      await odskrtni(banka, klice).catch(() => toast('Zapsáno. Službě banky se nepodařilo potvrdit – příště se ukážou jako už zapsané.'));
+      zapomenStavBanky();
+    }
     toast(`Zapsáno ${pocet(platby.length, 'platba', 'platby', 'plateb')}`);
     setHotovo(platby.length);
     setVysledky(null);
     setSoubory([]);
+    setZBanky(false);
   }
 
   const vse = vysledky?.flatMap(x => x.v) ?? [];
@@ -124,8 +166,20 @@ export default function Import() {
   const zmen = (klic: string, zmena: Partial<Rozhodnuti>) => setRozhodnuti({ ...rozhodnuti, [klic]: { ...rozhodnuti[klic], ...zmena } });
 
   return (
-    <AppShell title="Import z banky" subtitle="Nahrát výpisy">
+    <AppShell title="Import z banky" subtitle={banka ? 'Platby z banky a výpisy' : 'Nahrát výpisy'}>
       <Main>
+        {!vysledky && banka && (
+          <section className="card-soft-2 mb-4 p-5">
+            <div className="flex items-center gap-3">
+              <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-status-over-soft text-status-over"><Landmark className="size-6" /></span>
+              <div className="min-w-0 flex-1"><p className="font-bold">Platby z banky</p>
+                <p className="text-xs text-muted-foreground">Načítají se samy každé ráno. Zapíšou se až po vašem potvrzení.</p></div>
+            </div>
+            <Tlacitko className="mt-4" onClick={chran(() => zkontrolujBanku())} disabled={nactiBanku}>{nactiBanku ? 'Načítám…' : 'Zkontrolovat platby z banky'}</Tlacitko>
+            <button onClick={chran(() => zkontrolujBanku(true))} disabled={nactiBanku} className="mt-2 h-11 w-full rounded-2xl bg-muted text-sm font-bold disabled:opacity-50">Načíst z banky teď</button>
+            <Chyba text={chybaBanky} />
+          </section>
+        )}
         {!vysledky && (
           <label className="flex cursor-pointer flex-col items-center rounded-[24px] border-2 border-dashed border-primary/40 bg-primary-soft/50 px-6 py-10 text-center">
             <span className="flex size-16 items-center justify-center rounded-2xl bg-primary-soft text-primary">
@@ -163,7 +217,7 @@ export default function Import() {
                 </div>
               ))}
             </Card>
-            <Tlacitko className="mt-4" onClick={sparujVse} disabled={!soubory.some(s => s.vypis?.ucet)}>Spárovat platby</Tlacitko>
+            <Tlacitko className="mt-4" onClick={() => { setZBanky(false); sparujVse(); }} disabled={!soubory.some(s => s.vypis?.ucet)}>Spárovat platby</Tlacitko>
           </>
         )}
 
@@ -211,7 +265,7 @@ export default function Import() {
 
             <div className="sticky bottom-24 mt-6 space-y-2">
               <Tlacitko onClick={chran(zapis)} disabled={busy}>Zapsat {pocet(kZapisu, 'platbu', 'platby', 'plateb')}</Tlacitko>
-              <button onClick={() => setVysledky(null)} className="h-11 w-full rounded-2xl bg-muted text-sm font-bold">Zpět k souborům</button>
+              <button onClick={() => { setVysledky(null); setZBanky(false); }} className="h-11 w-full rounded-2xl bg-muted text-sm font-bold">{zBanky ? 'Zpět' : 'Zpět k souborům'}</button>
             </div>
           </>
         )}

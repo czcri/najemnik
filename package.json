@@ -6,6 +6,9 @@
     "test": "node --test tests/*.test.mjs",
     "over-vypisy": "node nastroje/over-vypisy.mjs",
     "smoke": "node nastroje/smoke.mjs",
+    "banka:priprav": "node banka/priprav.mjs",
+    "banka:token": "npx --yes wrangler@4 secret put FIO_TOKEN_1 -c banka/wrangler.toml",
+    "banka:nasadit": "npx --yes wrangler@4 deploy -c banka/wrangler.toml",
     "dev": "vite",
     "build": "tsc -p tsconfig.json && vite build",
     "preview": "vite preview"

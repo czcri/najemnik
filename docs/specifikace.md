@@ -346,3 +346,17 @@ Změny proti pilotu:
 - Kalendář: den 31 = poslední den měsíce, první výskyt správně i pro dny 29–31.
 - Kontrast: tmavší oranžová pro text ve světlém režimu, tmavé písmo na červeném tlačítku v tmavém režimu; skloňování v záloze; „Přišlo v měsíci září 2026“.
 - Úvodní obrazovka 3 s ponechána (výslovné přání).
+
+## 21. Pevná částka platby a potvrzování změn (2026-11-03, verze 2.12)
+- Napsaná částka platby zůstává pevná při změně měsíce, nájemníka i čehokoli jiného; „Použít návrh“ vrátí návrh pro měsíc.
+- Každá změna dat se potvrzuje panelem se souhrnem (nová položka: údaje; úprava: jen změny před → po; mazání červeně).
+
+## 22. Hotovost „čekám k (den)“ (2026-11-03, verze 2.13)
+- Hotovostní nájemník s vyplněným dnem: běžný měsíc do toho dne není „Chybí“, ale „Čekám X Kč k D. M.“ (stav `ceka`); od toho dne „Chybí“, dluh po splatnosti od dalšího měsíce. Převody beze změny.
+
+## 23. Platby z banky automaticky (2026-11-06, verze 2.14)
+- Služba `najemnik-banka` (Cloudflare Worker, složka `banka/`): denně v 6:00 UTC stáhne z Fio API (token „Sledování účtu“, okno 10 dní) příchozí platby do fronty v KV a pošle Web Push bez obsahu. Data nájemníků služba nemá. Aplikace se prokazuje klíčem aplikace (hlavička X-Klic), CORS jen pro czcri.github.io.
+- Rozhraní: GET /stav (účty, poslední načtení, chyba, počet ve frontě, veřejný klíč VAPID), GET /pohyby, POST /nacist (nejvýš 1×/min), POST /hotovo {klice}, POST/DELETE /odber.
+- Aplikace: napojení odkazem `#/nastaveni?banka=<adresa>&klic=<klíč>` (s potvrzením); pruh na přehledu „Z banky přišly N plateb“ / „Načítání z banky nefunguje“; Import → „Zkontrolovat platby z banky“ / „Načíst z banky teď“ → stejný náhled párování jako výpis → potvrzení → zápis se štítkem „Z banky · Fio“ (`zdroj.auto`) → služba odškrtne zpracované (zapsané, není nájem, duplicity); přeskočené zůstávají. Klíč pohybu = `účet|id|ID pohybu` stejně jako u CSV → žádné dvojí zápisy.
+- Napojení na banku se neukládá do zálohy; obnova ze zálohy ponechá současné napojení.
+- Návod pro uživatele: docs/banka-napojeni.md. KB (ADAA): viz docs/navrh-fio-api.md, fáze 2.

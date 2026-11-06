@@ -4,6 +4,7 @@ import { CalendarPlus, Check, ChevronRight, Database, Download, Plus, Trash2 } f
 import { AppShell, Card, Main, Nadpis, Panel, Pole, Tlacitko, VSTUP, usePotvrzeni, useToast, zmeny } from '../components/ui';
 import { LogoSimplySoftware } from '../components/logo';
 import { Zaloha } from '../components/Zaloha';
+import { NastaveniBanky } from '../components/NastaveniBanky';
 import { useData } from '../data/store';
 import { VYCHOZI_SABLONY } from '../data/vychozi';
 import { aktualniNajem, icsHotovosti, mesicZData, normalizujUcet, odkazKalendare, prvniVyskyt } from '../lib/core';
@@ -11,7 +12,7 @@ import { datumCz, kc, noveId, posunMesic } from '../lib/format';
 import { ZNACKY, doplnSablonu } from '../lib/zpravy';
 import type { Najemnik, Sablona } from '../types';
 
-export const VERZE_APLIKACE = '2.13';
+export const VERZE_APLIKACE = '2.14';
 
 const UKAZKA: Najemnik = {
   id: 'x', jmeno: 'Jana Nováková', osloveni: 'paní Nováková', oznaceni: 'Byt 2 – Kolín', zacatek: '2026-01', konec: null,
@@ -92,6 +93,7 @@ export default function Nastaveni() {
     <AppShell title="Nastavení">
       <Main>
         <Zaloha />
+        <NastaveniBanky />
 
         <Nadpis>Šablony zpráv</Nadpis>
         <Card>

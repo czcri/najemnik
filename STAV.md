@@ -136,3 +136,16 @@ Další krok:
 
 - Zapsáno v `docs/navrh-fio-api.md`: oficiální Fio API s tokenem „Sledování účtu“ (jen čtení, 2FA jen při založení, platnost 180 dní s prodlužováním při přihlášení). Z prohlížeče nejde volat přímo (CORS 403), proto doporučena varianta A = malý Cloudflare Worker jako prostředník + „Načíst z Fio“ v Importu (náhled → potvrzení).
 - Otevřené otázky: varianta A/B/C, počet účtů Fio, automaticky × tlačítkem. Nic neimplementováno.
+
+## 2026-11-06 – verze 2.14: platby z banky automaticky (fáze 1: Fio)
+
+Hotovo:
+- Služba `banka/` (Cloudflare Worker): denní stažení z Fio API do fronty, upozornění Web Push, klíč aplikace, CORS, limit „Načíst teď“. Převod Fio JSON v `core/vypisy.js` (`nactiFioJson`) – klíče shodné s CSV.
+- Aplikace 2.14: Nastavení → Platby z banky (napojení odkazem, stav účtů, upozornění, odpojení); pruh na přehledu; Import → platby z banky (náhled → potvrzení → štítek „Z banky · Fio“ → odškrtnutí ve službě); service worker: upozornění + necachovat cizí adresy; napojení se neukládá do zálohy.
+- Příprava pro uživatele: `npm run banka:priprav`, `npm run banka:token`, návod docs/banka-napojeni.md; spec. kap. 21–23.
+- Testy: 80 (služba s podvrženou bankou, VAPID, Fio JSON) + kouřový test (+7 kontrol banky).
+
+Čeká na uživatele:
+- Token Fio, `npx wrangler@4 login`, `npm run banka:priprav`, `npm run banka:token`, odkaz do telefonu (docs/banka-napojeni.md).
+
+Další krok: fáze 2 – KB (ADAA).

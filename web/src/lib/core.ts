@@ -33,7 +33,7 @@ export type Pohyb = {
   datum: string; castkaHal: number; protiucet: string; nazevProtiuctu: string;
   vs: string; ks: string; ss: string; zprava: string; typ: string; idBanky: string;
 };
-export type Vypis = { banka: 'fio' | 'cs' | 'kb'; ucet: string; pohyby: Pohyb[] };
+export type Vypis = { banka: 'fio' | 'cs' | 'kb'; ucet: string; pohyby: Pohyb[]; auto?: boolean };
 export const jePdf = vypisy.jePdf as unknown as (b: Uint8Array) => boolean;
 export const nactiCsvVypis = vypisy.nactiCsvVypis as unknown as (b: Uint8Array, nazev: string) => Vypis;
 export const nactiKbPdf = vypisy.nactiKbPdf as unknown as (stranky: { x: number; y: number; str: string }[][]) => Vypis;
